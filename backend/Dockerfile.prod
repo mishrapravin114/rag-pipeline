@@ -1,0 +1,87 @@
+# Production Dockerfile with optimizations
+FROM python:3.11-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    python3-dev \
+    libffi-dev \
+    libssl-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy and install requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir gunicorn[gevent]==21.2.0 gevent==23.9.1
+
+# Production stage
+FROM python:3.11-slim
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN groupadd -g 1000 appuser && \
+    useradd -r -u 1000 -g appuser appuser
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Create necessary directories with proper permissions
+RUN mkdir -p data/chromadb data/mysql downloads uploads output/json output/logs && \
+    chmod -R 777 data/chromadb && \
+    chown -R appuser:appuser /app
+
+# Set environment variables
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONPATH=/app:/app/src \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    # Gunicorn settings
+    GUNICORN_WORKERS=4 \
+    GUNICORN_THREADS=1 \
+    GUNICORN_WORKER_CLASS=uvicorn.workers.UvicornWorker \
+    GUNICORN_WORKER_CONNECTIONS=1000 \
+    GUNICORN_MAX_REQUESTS=1000 \
+    GUNICORN_MAX_REQUESTS_JITTER=50 \
+    GUNICORN_TIMEOUT=600
+
+# Keep root user for ChromaDB write permissions
+# USER appuser
+
+# Expose port
+EXPOSE 8090
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8090/health')" || exit 1
+
+# Run gunicorn with production settings
+CMD exec gunicorn main:app \
+    --bind 0.0.0.0:8090 \
+    --workers ${GUNICORN_WORKERS} \
+    --threads ${GUNICORN_THREADS} \
+    --worker-class ${GUNICORN_WORKER_CLASS} \
+    --worker-connections ${GUNICORN_WORKER_CONNECTIONS} \
+    --max-requests ${GUNICORN_MAX_REQUESTS} \
+    --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER} \
+    --timeout ${GUNICORN_TIMEOUT} \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info \
+    --preload

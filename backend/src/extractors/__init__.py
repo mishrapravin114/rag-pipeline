@@ -1,0 +1,1 @@
+# Empty __init__.py - all old extractors have been removed

@@ -1,0 +1,120 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.md
+.Python
+build/
+docs/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+backend/lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.production.local
+*.env
+
+gcp_service_account_key.json
+google_client_secrets.json
+# Database
+*.sqlite
+*.sqlite3
+chromadb/
+data/
+# Uploads and Downloads
+uploads/
+downloads/
+temp/
+tmp/
+
+# Logs
+*.log
+logs/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm
+.yarn
+
+# Next.js
+.next/
+out/
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Production
+build/
+dist/
+
+# Misc
+.DS_Store
+*.pem
+Thumbs.db
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Testing
+coverage/
+.nyc_output
+test-*.py
+test-*.sh
+check-*.py
+fix-*.py
+
+# Deployment Guide (keep this in repo)
+!DEPLOYMENT_GUIDE.md
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# API Keys and Secrets
+*.key
+*.pem
+secrets/
