@@ -13,7 +13,7 @@ interface SearchBarProps {
 
 export function SearchBar({
   onSearch,
-  placeholder = "Search entities, brands, or therapeutic areas...",
+  placeholder = "Search drugs, brands, or therapeutic areas...",
   showFilters = true,
 }: SearchBarProps) {
   const [query, setQuery] = useState("")

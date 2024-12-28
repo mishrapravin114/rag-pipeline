@@ -6,7 +6,7 @@ import logging
 from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, func
-from database.database import SourceFiles, MetadataConfiguration, EntityMetadata, DocumentData
+from database.database import SourceFiles, MetadataConfiguration, DrugMetadata, DocumentData
 from utils.qdrant_util import QdrantUtil
 # from utils.llm_utils import get_llm  # Removed, not used
 import json
@@ -27,13 +27,13 @@ class MetadataExtractionService:
             results = []
             for file in source_files:
                 # Count extracted metadata for this file
-                metadata_count = db.query(EntityMetadata).filter(
-                    EntityMetadata.source_file_id == file.id
+                metadata_count = db.query(DrugMetadata).filter(
+                    DrugMetadata.source_file_id == file.id
                 ).count()
                 
                 # Get unique metadata names extracted for this file
-                unique_metadata = db.query(EntityMetadata.metadata_name).filter(
-                    EntityMetadata.source_file_id == file.id
+                unique_metadata = db.query(DrugMetadata.metadata_name).filter(
+                    DrugMetadata.source_file_id == file.id
                 ).distinct().all()
                 unique_metadata_names = [m[0] for m in unique_metadata]
                 
@@ -41,7 +41,7 @@ class MetadataExtractionService:
                     "id": file.id,
                     "file_name": file.file_name,
                     "file_url": file.file_url,
-                    "entity_name": file.entity_name,
+                    "drug_name": file.drug_name,
                     "us_ma_date": file.us_ma_date,
                     "status": file.status,
                     "metadata_extracted": file.metadata_extracted,
@@ -81,7 +81,7 @@ class MetadataExtractionService:
                 query = query.filter(
                     SourceFiles.file_name.ilike(search_term) |
                     SourceFiles.file_url.ilike(search_term) |
-                    SourceFiles.entity_name.ilike(search_term)
+                    SourceFiles.drug_name.ilike(search_term)
                 )
             
             # Get total count before pagination
@@ -93,13 +93,13 @@ class MetadataExtractionService:
             results = []
             for file in source_files:
                 # Count extracted metadata for this file
-                metadata_count = db.query(EntityMetadata).filter(
-                    EntityMetadata.source_file_id == file.id
+                metadata_count = db.query(DrugMetadata).filter(
+                    DrugMetadata.source_file_id == file.id
                 ).count()
                 
                 # Get unique metadata names extracted for this file
-                unique_metadata = db.query(EntityMetadata.metadata_name).filter(
-                    EntityMetadata.source_file_id == file.id
+                unique_metadata = db.query(DrugMetadata.metadata_name).filter(
+                    DrugMetadata.source_file_id == file.id
                 ).distinct().all()
                 unique_metadata_names = [m[0] for m in unique_metadata]
                 
@@ -107,7 +107,7 @@ class MetadataExtractionService:
                     "id": file.id,
                     "file_name": file.file_name,
                     "file_url": file.file_url,
-                    "entity_name": file.entity_name,
+                    "drug_name": file.drug_name,
                     "us_ma_date": file.us_ma_date,
                     "status": file.status,
                     "metadata_extracted": file.metadata_extracted,
@@ -154,7 +154,7 @@ class MetadataExtractionService:
             ).count()
             
             # Total metadata fields extracted
-            total_metadata_fields = db.query(EntityMetadata).count()
+            total_metadata_fields = db.query(DrugMetadata).count()
             
             return {
                 "total": total_files,
@@ -234,10 +234,10 @@ class MetadataExtractionService:
                     
                     if extraction_result["success"]:
                         # Save to database
-                        entity_metadata = EntityMetadata(
+                        drug_metadata = DrugMetadata(
                             metadata_name=config.metadata_name,
                             value=extraction_result["value"],
-                            entityname=source_file.entity_name,
+                            drugname=source_file.drug_name,
                             source_file_id=source_file_id,
                             file_url=source_file.file_url,
                             extracted_by=user_id,
@@ -247,10 +247,10 @@ class MetadataExtractionService:
                         )
                         
                         # Check if metadata already exists for this file and metadata name
-                        existing = db.query(EntityMetadata).filter(
+                        existing = db.query(DrugMetadata).filter(
                             and_(
-                                EntityMetadata.source_file_id == source_file_id,
-                                EntityMetadata.metadata_name == config.metadata_name
+                                DrugMetadata.source_file_id == source_file_id,
+                                DrugMetadata.metadata_name == config.metadata_name
                             )
                         ).first()
                         
@@ -265,7 +265,7 @@ class MetadataExtractionService:
                             logger.info(f"Updated existing metadata: {config.metadata_name} (confidence: {extraction_result['confidence_score']})")
                         else:
                             # Add new metadata
-                            db.add(entity_metadata)
+                            db.add(drug_metadata)
                             logger.info(f"Added new metadata: {config.metadata_name} (confidence: {extraction_result['confidence_score']})")
                         
                         extraction_results.append({
@@ -532,7 +532,7 @@ class MetadataExtractionService:
                         "validation_notes": parsed.get("validation_notes", "")
                     }
                 else:
-                    # Handle complex/nested JSON responses (like Basic Entity Information)
+                    # Handle complex/nested JSON responses (like Basic Drug Information)
                     # Convert the entire JSON to a formatted string
                     if isinstance(parsed, dict):
                         # Calculate average confidence if multiple fields have confidence levels
@@ -764,8 +764,8 @@ Respond with JSON:
             ).order_by(MetadataConfiguration.metadata_name).all()
             
             # Get extracted metadata
-            extracted_metadata = db.query(EntityMetadata).filter(
-                EntityMetadata.source_file_id == source_file_id
+            extracted_metadata = db.query(DrugMetadata).filter(
+                DrugMetadata.source_file_id == source_file_id
             ).all()
             
             # Create a dictionary for quick lookup
@@ -781,7 +781,7 @@ Respond with JSON:
                         "id": metadata.id,
                         "metadata_name": metadata.metadata_name,
                         "value": metadata.value,
-                        "entityname": metadata.entityname,
+                        "drugname": metadata.drugname,
                         "source_file_id": metadata.source_file_id,
                         "file_url": metadata.file_url,
                         "extracted_by": metadata.extracted_by,
@@ -797,7 +797,7 @@ Respond with JSON:
                         "id": None,
                         "metadata_name": config.metadata_name,
                         "value": None,  # Will show as "Not found" in UI
-                        "entityname": source_file.entity_name,
+                        "drugname": source_file.drug_name,
                         "source_file_id": source_file_id,
                         "file_url": source_file.file_url,
                         "extracted_by": None,
@@ -813,7 +813,7 @@ Respond with JSON:
                 "source_file": {
                     "id": source_file.id,
                     "file_name": source_file.file_name,
-                    "entity_name": source_file.entity_name,
+                    "drug_name": source_file.drug_name,
                     "file_url": source_file.file_url
                 },
                 "metadata": metadata_list,
@@ -902,8 +902,8 @@ Respond with JSON:
                 return {"success": False, "error": "Source file not found"}
             
             # Delete all metadata for this source file
-            deleted_count = db.query(EntityMetadata).filter(
-                EntityMetadata.source_file_id == source_file_id
+            deleted_count = db.query(DrugMetadata).filter(
+                DrugMetadata.source_file_id == source_file_id
             ).delete()
             
             # Reset metadata_extracted status
@@ -937,7 +937,7 @@ Respond with JSON:
             from sqlalchemy import text
             query = text("""
             SELECT
-              sf.entity_name,
+              sf.drug_name,
               sf.us_ma_date,
               sf.file_url AS document_url,
               dm.metadata_name,
@@ -945,21 +945,21 @@ Respond with JSON:
               dm.confidence_score,
               dm.created_at
             FROM SourceFiles sf
-            JOIN EntityMetadata dm ON sf.id = dm.source_file_id
+            JOIN DrugMetadata dm ON sf.id = dm.source_file_id
             JOIN MetadataConfiguration mc ON dm.metadata_name = mc.metadata_name
             WHERE mc.is_active = true
-            ORDER BY sf.entity_name, sf.us_ma_date
+            ORDER BY sf.drug_name, sf.us_ma_date
             """)
             
             result = db.execute(query)
             rows = result.fetchall()
             
-            # Group data by entity_name and us_ma_date for JSON structure
+            # Group data by drug_name and us_ma_date for JSON structure
             grouped_data = {}
             flat_data = []
             
             for row in rows:
-                entity_name = row[0] or 'Unknown Entity'
+                drug_name = row[0] or 'Unknown Drug'
                 us_ma_date = row[1] or 'No Date'
                 document_url = row[2] or ''
                 metadata_name = row[3] or ''
@@ -974,15 +974,15 @@ Respond with JSON:
                         extraction_date = row[6].strftime('%Y-%m-%d %H:%M:%S')
                 
                 # For JSON structure (grouped)
-                if entity_name not in grouped_data:
-                    grouped_data[entity_name] = {}
-                if us_ma_date not in grouped_data[entity_name]:
-                    grouped_data[entity_name][us_ma_date] = {
+                if drug_name not in grouped_data:
+                    grouped_data[drug_name] = {}
+                if us_ma_date not in grouped_data[drug_name]:
+                    grouped_data[drug_name][us_ma_date] = {
                         'documentUrl': document_url,
                         'metadata': {}
                     }
                 
-                grouped_data[entity_name][us_ma_date]['metadata'][metadata_name] = {
+                grouped_data[drug_name][us_ma_date]['metadata'][metadata_name] = {
                     'value': value,
                     'confidence_score': confidence_score,
                     'extraction_date': extraction_date
@@ -991,7 +991,7 @@ Respond with JSON:
                 # For Excel structure (flat)
                 flat_data.append({
                     'File URL': document_url,
-                    'Entity Name': entity_name,
+                    'Drug Name': drug_name,
                     'US MA Date': us_ma_date,
                     'Metadata Name': metadata_name,
                     'Extracted Value': value,
@@ -999,14 +999,14 @@ Respond with JSON:
                     'Extraction Date': extraction_date
                 })
             
-            logger.info(f"Retrieved {len(rows)} metadata records for {len(grouped_data)} entities")
+            logger.info(f"Retrieved {len(rows)} metadata records for {len(grouped_data)} drugs")
             
             return {
                 "success": True,
                 "grouped_data": grouped_data,
                 "flat_data": flat_data,
                 "total_records": len(rows),
-                "total_entities": len(grouped_data)
+                "total_drugs": len(grouped_data)
             }
             
         except Exception as e:

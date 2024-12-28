@@ -67,7 +67,7 @@ def create_sample_metadata_config(db, user_id: int):
     try:
         # Check if sample config already exists
         existing_config = db.query(MetadataConfiguration).filter(
-            MetadataConfiguration.metadata_name == "Basic Entity Information"
+            MetadataConfiguration.metadata_name == "Basic Drug Information"
         ).first()
         
         if existing_config:
@@ -76,10 +76,10 @@ def create_sample_metadata_config(db, user_id: int):
             return existing_config
         
         sample_config = MetadataConfiguration(
-            metadata_name="Basic Entity Information",
-            description="Extract basic entity information including name, manufacturer, and approval details",
+            metadata_name="Basic Drug Information",
+            description="Extract basic drug information including name, manufacturer, and approval details",
             extraction_prompt="""Extract the following information from the FDA document:
-1. Entity/Brand name
+1. Drug/Brand name
 2. Manufacturer name
 3. Approval date
 4. Active ingredients

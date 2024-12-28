@@ -49,19 +49,19 @@ interface ChatModalProps {
   isOpen: boolean;
   onClose: () => void;
   sourceFileIds: number[];
-  entityNames: string[];
+  drugNames: string[];
 }
 
 const quickSuggestions = [
   "What are the main side effects?",
-  "Tell me about entity interactions",
+  "Tell me about drug interactions",
   "What is the recommended dosage?",
   "Explain the contraindications",
   "What are the warnings and precautions?",
   "Describe the mechanism of action"
 ];
 
-export function ChatModal({ isOpen, onClose, sourceFileIds, entityNames }: ChatModalProps) {
+export function ChatModal({ isOpen, onClose, sourceFileIds, drugNames }: ChatModalProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -76,13 +76,13 @@ export function ChatModal({ isOpen, onClose, sourceFileIds, entityNames }: ChatM
     if (isOpen) {
       // Initialize with welcome message
       const welcomeContent = isMultipleFiles
-        ? `I can help you compare and analyze information across these ${sourceFileIds.length} entities: **${entityNames.filter(Boolean).join(', ') || 'FDA documents'}**. What would you like to know?`
-        : `I can provide detailed information about **${entityNames[0] || 'this FDA document'}** based on official FDA documentation. What would you like to know?`;
+        ? `I can help you compare and analyze information across these ${sourceFileIds.length} drugs: **${drugNames.filter(Boolean).join(', ') || 'FDA documents'}**. What would you like to know?`
+        : `I can provide detailed information about **${drugNames[0] || 'this FDA document'}** based on official FDA documentation. What would you like to know?`;
       
       const suggestions = isMultipleFiles 
         ? [
-            `Compare side effects between ${entityNames.filter(Boolean).slice(0, 2).join(' and ') || 'these entities'}`,
-            "Which entity has fewer interactions?",
+            `Compare side effects between ${drugNames.filter(Boolean).slice(0, 2).join(' and ') || 'these drugs'}`,
+            "Which drug has fewer interactions?",
             "Compare the dosage recommendations",
             "What are the key differences?"
           ]
@@ -99,7 +99,7 @@ export function ChatModal({ isOpen, onClose, sourceFileIds, entityNames }: ChatM
       // Focus input
       setTimeout(() => textareaRef.current?.focus(), 100);
     }
-  }, [isOpen, sourceFileIds, entityNames, isMultipleFiles]);
+  }, [isOpen, sourceFileIds, drugNames, isMultipleFiles]);
 
   useEffect(() => {
     scrollToBottom();
@@ -136,7 +136,7 @@ export function ChatModal({ isOpen, onClose, sourceFileIds, entityNames }: ChatM
     setMessages(prev => [...prev, loadingMessage]);
     
     try {
-      // Use document-specific chat endpoint for DocuGenius
+      // Use document-specific chat endpoint for DocXAI
       const requestPayload: any = { 
         message: message
       };
@@ -331,10 +331,10 @@ export function ChatModal({ isOpen, onClose, sourceFileIds, entityNames }: ChatM
                 <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
                   <MessageCircle className="h-6 w-6" />
                 </div>
-                {isMultipleFiles ? 'Multi-Entity Analysis' : 'FDA Entity Assistant'}
+                {isMultipleFiles ? 'Multi-Drug Analysis' : 'FDA Drug Assistant'}
               </DialogTitle>
               <div className="flex items-center gap-2 flex-wrap">
-                {entityNames.map((name, index) => (
+                {drugNames.map((name, index) => (
                   <Badge key={index} className="bg-white/20 text-white border-white/30 backdrop-blur-sm">
                     <FileText className="h-3 w-3 mr-1" />
                     {name}
@@ -483,7 +483,7 @@ export function ChatModal({ isOpen, onClose, sourceFileIds, entityNames }: ChatM
                 {(isMultipleFiles ? [
                   `Compare side effects`,
                   `Which is more effective?`,
-                  `Entity interactions comparison`,
+                  `Drug interactions comparison`,
                   `Dosage differences`,
                   `Cost comparison`,
                   `Safety profiles`
@@ -513,7 +513,7 @@ export function ChatModal({ isOpen, onClose, sourceFileIds, entityNames }: ChatM
                     setIsTyping(e.target.value.length > 0);
                   }}
                   onKeyPress={handleKeyPress}
-                  placeholder="Ask anything about the entity(s)..."
+                  placeholder="Ask anything about the drug(s)..."
                   className="w-full resize-none border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 pr-12"
                   rows={3}
                   disabled={isLoading}

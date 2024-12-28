@@ -34,7 +34,7 @@ interface ExtractionHistoryTabProps {
 interface DocumentPreview {
   id: number;
   file_name: string;
-  entity_name?: string;
+  drug_name?: string;
 }
 
 interface ExtractionJob {
@@ -233,8 +233,8 @@ export function ExtractionHistoryTab({ collectionId, collectionName }: Extractio
         {displayDocs.map((doc, idx) => (
           <div key={doc.id} className="text-xs">
             <span className="font-medium">{idx + 1}.</span> {doc.file_name}
-            {doc.entity_name && (
-              <span className="text-gray-500 ml-1">({doc.entity_name})</span>
+            {doc.drug_name && (
+              <span className="text-gray-500 ml-1">({doc.drug_name})</span>
             )}
           </div>
         ))}

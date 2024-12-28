@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const allResults = [
       {
         id: '1',
-        entity_name: 'OCREVUS',
+        drug_name: 'OCREVUS',
         manufacturer: 'Genentech, Inc.',
         approval_date: '2017-03-28',
         indication: 'Treatment of relapsing forms of multiple sclerosis',
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
       },
       {
         id: '2',
-        entity_name: 'ANKTIVA',
+        drug_name: 'ANKTIVA',
         manufacturer: 'ImmunityBio, Inc.',
         approval_date: '2024-04-22',
         indication: 'Treatment of BCG-unresponsive non-muscle invasive bladder cancer',
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       },
       {
         id: '3',
-        entity_name: 'ALECENSA',
+        drug_name: 'ALECENSA',
         manufacturer: 'Genentech, Inc.',
         approval_date: '2015-12-11',
         indication: 'Treatment of ALK-positive metastatic non-small cell lung cancer',
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       },
       {
         id: '4',
-        entity_name: 'AUGTYRO',
+        drug_name: 'AUGTYRO',
         manufacturer: 'Roche Products Limited',
         approval_date: '2023-11-15',
         indication: 'Treatment of RET fusion-positive solid tumors',
@@ -48,18 +48,18 @@ export async function GET(request: Request) {
     let results = allResults;
     if (query) {
       results = allResults.filter(
-        (entity) =>
-          entity.entity_name.toLowerCase().includes(query.toLowerCase()) ||
-          entity.manufacturer.toLowerCase().includes(query.toLowerCase()) ||
-          entity.indication.toLowerCase().includes(query.toLowerCase())
+        (drug) =>
+          drug.drug_name.toLowerCase().includes(query.toLowerCase()) ||
+          drug.manufacturer.toLowerCase().includes(query.toLowerCase()) ||
+          drug.indication.toLowerCase().includes(query.toLowerCase())
       );
     }
 
     // Filter by therapeutic area if provided
     if (therapeuticArea && therapeuticArea !== '') {
       // This is a simple mock - in reality you'd have proper therapeutic area mapping
-      results = results.filter((entity) =>
-        entity.indication.toLowerCase().includes(therapeuticArea.toLowerCase())
+      results = results.filter((drug) =>
+        drug.indication.toLowerCase().includes(therapeuticArea.toLowerCase())
       );
     }
 

@@ -88,7 +88,7 @@ def get_agentic_rag_agent(
         name="metadata-extraction-agent",
         model=Gemini(id="gemini-2.5-flash"),
         instructions=[
-            "You are a metadata extraction specialist for FDA entity label documents.",
+            "You are a metadata extraction specialist for FDA drug label documents.",
             "Your task is to extract specific information when asked.",
             "IMPORTANT: You have access to a knowledge base that will automatically search for relevant information.",
             "When you receive a question, search the knowledge base and extract the requested information.",
@@ -98,7 +98,7 @@ def get_agentic_rag_agent(
             "- If the information is not found in the search results, respond with exactly 'Not Found'",
             "- Be precise and extract the exact information requested",
             "- For dates, use the format found in the document",
-            "- For entity names, use the brand name or generic name as requested"
+            "- For drug names, use the brand name or generic name as requested"
         ],
         knowledge=knowledge_base,
         search_knowledge=True,
@@ -175,7 +175,7 @@ async def enhance_query_for_metadata(query: str, metadata_name: str, llm) -> str
         
         # For metadata extraction, create a single cohesive query
         enhancement_prompt = f"""
-        You need to create ONE single search query to find information about "{metadata_name}" in an FDA entity label document.
+        You need to create ONE single search query to find information about "{metadata_name}" in an FDA drug label document.
         
         Original extraction instruction: {query}
         
@@ -186,13 +186,13 @@ async def enhance_query_for_metadata(query: str, metadata_name: str, llm) -> str
         - The query should read like a single question or statement
         
         Examples of good queries:
-        - "What is the entity's name, manufacturer, approval date and active ingredients?"
+        - "What is the drug's name, manufacturer, approval date and active ingredients?"
         - "What are the clinical efficacy results and trial outcomes for this medication?"
-        - "What safety warnings and contraindications are listed for this entity?"
+        - "What safety warnings and contraindications are listed for this drug?"
         
         Examples of bad queries (DO NOT DO THIS):
-        - "Entity name" "Manufacturer" "Approval date"
-        - Entity name, manufacturer, approval date
+        - "Drug name" "Manufacturer" "Approval date"
+        - Drug name, manufacturer, approval date
         - Name. Manufacturer. Date.
         
         Output only the single query sentence, nothing else.
@@ -213,7 +213,7 @@ async def enhance_query_for_metadata(query: str, metadata_name: str, llm) -> str
         logger.error(f"Error enhancing query: {str(e)}")
         logger.exception("Full traceback:")
         # Create a simple fallback question
-        fallback = f"What is the {metadata_name} of this entity?"
+        fallback = f"What is the {metadata_name} of this drug?"
         logger.warning(f"Using fallback query: {fallback}")
         return fallback
 
@@ -300,7 +300,7 @@ async def process_metadata_extraction(
                 
                 # Get document content
                 doc_query = text("""
-                    SELECT id, file_name, entity_name, extracted_content
+                    SELECT id, file_name, drug_name, extracted_content
                     FROM SourceFiles
                     WHERE id = :doc_id
                 """)
@@ -311,7 +311,7 @@ async def process_metadata_extraction(
                     failed_count += 1
                     continue
                 
-                logger.info(f"Document found: {document.file_name} (entity: {document.entity_name})")
+                logger.info(f"Document found: {document.file_name} (drug: {document.drug_name})")
                 
                 # Progress is now tracked via database polling instead of WebSocket
                 logger.info(f"Processing document {doc_index + 1}/{len(document_ids)}: {document.file_name}")

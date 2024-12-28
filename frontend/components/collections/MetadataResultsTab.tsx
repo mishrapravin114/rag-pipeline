@@ -45,7 +45,7 @@ interface MetadataGroup {
 interface DocumentMetadata {
   document_id: number;
   file_name: string;
-  entity_name?: string;
+  drug_name?: string;
   metadata: Record<string, string>;
   groups: string[];
 }
@@ -84,7 +84,7 @@ export function MetadataResultsTab({ collectionId, collectionName }: MetadataRes
         const searchLower = searchTerm.toLowerCase();
         return (
           doc.file_name.toLowerCase().includes(searchLower) ||
-          doc.entity_name?.toLowerCase().includes(searchLower) ||
+          doc.drug_name?.toLowerCase().includes(searchLower) ||
           Object.values(doc.metadata).some(value => 
             value.toLowerCase().includes(searchLower)
           )
@@ -390,8 +390,8 @@ export function MetadataResultsTab({ collectionId, collectionName }: MetadataRes
                     <td className="p-4" style={{width: '10%'}}>
                       <div className="break-words">
                         <p className="font-medium text-sm break-words">{doc.file_name}</p>
-                        {doc.entity_name && (
-                          <p className="text-xs text-gray-600 break-words mt-1">{doc.entity_name}</p>
+                        {doc.drug_name && (
+                          <p className="text-xs text-gray-600 break-words mt-1">{doc.drug_name}</p>
                         )}
                       </div>
                     </td>

@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, func, distinct
-from database.database import FDAExtractionResults, ChatHistory, SourceFiles, EntitySections, SearchHistory, Collection, collection_document_association
+from database.database import FDAExtractionResults, ChatHistory, SourceFiles, DrugSections, SearchHistory, Collection, collection_document_association
 from utils.qdrant_util import QdrantUtil
 from utils.llm_util import get_embeddings_model
 from api.services.analytics_service import AnalyticsService
@@ -21,7 +21,7 @@ class FDAChatManagementService:
     async def search_fda_documents(
         search_query: str,
         user_id: int,
-        entity_name: Optional[str] = None,
+        drug_name: Optional[str] = None,
         collection_id: Optional[int] = None,
         source_file_id: Optional[int] = None,
         limit: int = 20,
@@ -29,7 +29,7 @@ class FDAChatManagementService:
         db: Session = None
     ) -> Dict[str, Any]:
         """Search for FDA documents using SourceFiles table with SQL first, then vector search fallback."""
-        logger.info(f"Searching FDA documents with query: {search_query}, entity_name filter: {entity_name}, collection_id: {collection_id}, source_file_id: {source_file_id}")
+        logger.info(f"Searching FDA documents with query: {search_query}, drug_name filter: {drug_name}, collection_id: {collection_id}, source_file_id: {source_file_id}")
         
         start_time = datetime.now()
         
@@ -46,8 +46,8 @@ class FDAChatManagementService:
             
             # Prepare filters for analytics tracking
             filters = {}
-            if entity_name:
-                filters["entity_name"] = entity_name
+            if drug_name:
+                filters["drug_name"] = drug_name
             if collection_id:
                 filters["collection_id"] = collection_id
             if source_file_id:
@@ -108,7 +108,7 @@ class FDAChatManagementService:
                             "source_file_id": source_file.id,
                             "file_name": source_file.file_name,
                             "file_url": source_file.file_url,
-                            "entity_name": source_file.entity_name,
+                            "drug_name": source_file.drug_name,
                             "us_ma_date": source_file.us_ma_date,
                             "relevance_score": round(relevance_score, 1),
                             "relevance_comments": result.get("relevance_comments", "Content match within specific document"),
@@ -146,28 +146,28 @@ class FDAChatManagementService:
                     "total_results": total_results
                 }
             
-            # If both entity_name and query are provided, go directly to vector search with metadata filter
-            elif entity_name and search_query.strip():
-                logger.info(f"Both entity_name and query provided - using vector search with metadata filter")
+            # If both drug_name and query are provided, go directly to vector search with metadata filter
+            elif drug_name and search_query.strip():
+                logger.info(f"Both drug_name and query provided - using vector search with metadata filter")
                 
-                # Get file names for the specific entity to use as metadata filter
-                entitie_files_query = db.query(SourceFiles).filter(
-                    SourceFiles.entity_name == entity_name
+                # Get file names for the specific drug to use as metadata filter
+                drug_files_query = db.query(SourceFiles).filter(
+                    SourceFiles.drug_name == drug_name
                 )
                 
                 # Add collection filter if provided
                 if collection_id:
-                    entitie_files_query = entitie_files_query.join(
+                    drug_files_query = drug_files_query.join(
                         collection_document_association,
                         SourceFiles.id == collection_document_association.c.document_id
                     ).filter(
                         collection_document_association.c.collection_id == collection_id
                     ).distinct()
                 
-                entitie_files = entitie_files_query.all()
+                drug_files = drug_files_query.all()
                 
-                if not entitie_files:
-                    logger.info(f"No files found for entity: {entity_name}")
+                if not drug_files:
+                    logger.info(f"No files found for drug: {drug_name}")
                     # Track search with no results
                     execution_time = (datetime.now() - start_time).total_seconds() * 1000
                     await AnalyticsService.track_search(
@@ -187,8 +187,8 @@ class FDAChatManagementService:
                         "total_results": 0
                     }
                 
-                # Use search_with_grading with entity filter
-                file_names = [f.file_name for f in entitie_files]
+                # Use search_with_grading with drug filter
+                file_names = [f.file_name for f in drug_files]
                 vector_results = FDAChatManagementService.search_with_grading(
                     query=search_query,
                     collection_name=vector_db_collection_name,
@@ -228,10 +228,10 @@ class FDAChatManagementService:
                             "source_file_id": source_file.id,
                             "file_name": source_file.file_name,
                             "file_url": source_file.file_url,
-                            "entity_name": source_file.entity_name,
+                            "drug_name": source_file.drug_name,
                             "us_ma_date": source_file.us_ma_date,
                             "relevance_score": round(relevance_score, 1),
-                            "relevance_comments": result.get("relevance_comments", "Content match with entity filter"),
+                            "relevance_comments": result.get("relevance_comments", "Content match with drug filter"),
                             "grade_weight": result.get('grade_weight', 0),
                             "search_type": "Vector"
                         })
@@ -248,7 +248,7 @@ class FDAChatManagementService:
                     execution_time_ms=int(execution_time)
                 )
                 
-                logger.info(f"Vector search with entity filter returned {len(results)} results")
+                logger.info(f"Vector search with drug filter returned {len(results)} results")
                 
                 # Sort by relevance score (highest first)
                 results.sort(key=lambda x: x['relevance_score'], reverse=True)
@@ -267,7 +267,7 @@ class FDAChatManagementService:
                 }
             
             # Original SQL search logic for other cases
-            logger.info(f"Executing SQL search - entity_name: {entity_name}, collection_id: {collection_id}, query empty: {not search_query.strip()}")
+            logger.info(f"Executing SQL search - drug_name: {drug_name}, collection_id: {collection_id}, query empty: {not search_query.strip()}")
             sql_query = db.query(SourceFiles)
             
             # Add collection filter if provided
@@ -281,19 +281,19 @@ class FDAChatManagementService:
                     collection_document_association.c.indexing_status == 'indexed'
                 ).distinct()
             
-            if entity_name and not search_query.strip():
-                # Entity name filter (with or without collection), no search query
-                logger.info(f"Adding entity name filter: {entity_name}")
-                sql_query = sql_query.filter(SourceFiles.entity_name == entity_name)
-            elif search_query.strip() and not entity_name:
-                # Only search query, no entity filter - search entity names
-                sql_query = sql_query.filter(SourceFiles.entity_name.ilike(f"%{search_query}%"))
-            elif not search_query.strip() and not entity_name and collection_id:
+            if drug_name and not search_query.strip():
+                # Drug name filter (with or without collection), no search query
+                logger.info(f"Adding drug name filter: {drug_name}")
+                sql_query = sql_query.filter(SourceFiles.drug_name == drug_name)
+            elif search_query.strip() and not drug_name:
+                # Only search query, no drug filter - search drug names
+                sql_query = sql_query.filter(SourceFiles.drug_name.ilike(f"%{search_query}%"))
+            elif not search_query.strip() and not drug_name and collection_id:
                 # Only collection filter - this is allowed
                 pass
             else:
-                # No entity filter, no search query, and no collection - this shouldn't happen due to frontend validation
-                logger.warning("Search called with no query, no entity filter, and no collection")
+                # No drug filter, no search query, and no collection - this shouldn't happen due to frontend validation
+                logger.warning("Search called with no query, no drug filter, and no collection")
                 return {
                     "success": True,
                     "results": [],
@@ -313,20 +313,20 @@ class FDAChatManagementService:
                 results = []
                 for file in sql_results:
                     # Determine relevance comment based on filters
-                    if collection_id and entity_name and not search_query.strip():
-                        relevance_comment = f"Document from collection matching entity name: {entity_name}"
-                    elif entity_name and not search_query.strip():
-                        relevance_comment = f"Exact match on entity name: {entity_name}"
-                    elif collection_id and not entity_name and not search_query.strip():
+                    if collection_id and drug_name and not search_query.strip():
+                        relevance_comment = f"Document from collection matching drug name: {drug_name}"
+                    elif drug_name and not search_query.strip():
+                        relevance_comment = f"Exact match on drug name: {drug_name}"
+                    elif collection_id and not drug_name and not search_query.strip():
                         relevance_comment = "Document from selected collection"
                     else:
-                        relevance_comment = "Entity name contains search term"
+                        relevance_comment = "Drug name contains search term"
                     
                     results.append({
                         "source_file_id": file.id,
                         "file_name": file.file_name,
                         "file_url": file.file_url,
-                        "entity_name": file.entity_name,
+                        "drug_name": file.drug_name,
                         "us_ma_date": file.us_ma_date,
                         "relevance_score": 100,
                         "relevance_comments": relevance_comment,
@@ -356,9 +356,9 @@ class FDAChatManagementService:
                 }
             
             # Check if we should skip vector search fallback
-            if collection_id and entity_name and not search_query.strip():
-                # No fallback to vector search when looking for exact entity matches in a collection
-                logger.info(f"No documents found with entity_name '{entity_name}' in collection {collection_id}")
+            if collection_id and drug_name and not search_query.strip():
+                # No fallback to vector search when looking for exact drug matches in a collection
+                logger.info(f"No documents found with drug_name '{drug_name}' in collection {collection_id}")
                 
                 # Track SQL search with no results
                 execution_time = (datetime.now() - start_time).total_seconds() * 1000
@@ -377,7 +377,7 @@ class FDAChatManagementService:
                     "results": [],
                     "search_type": "SQL",
                     "total_results": 0,
-                    "message": f"No documents found with entity name '{entity_name}' in the selected collection"
+                    "message": f"No documents found with drug name '{drug_name}' in the selected collection"
                 }
             
             # Step 2: Vector search fallback (only for cases with actual search queries)
@@ -448,7 +448,7 @@ class FDAChatManagementService:
                         "source_file_id": source_file.id,
                         "file_name": source_file.file_name,
                         "file_url": source_file.file_url,
-                        "entity_name": source_file.entity_name,
+                        "drug_name": source_file.drug_name,
                         "us_ma_date": source_file.us_ma_date,
                         "relevance_score": round(relevance_score, 1),
                         "relevance_comments": result.get("relevance_comments", "Content similarity match"),
@@ -502,36 +502,36 @@ class FDAChatManagementService:
             }
     
     @staticmethod
-    def get_unique_entitie_names(db: Session, collection_id: Optional[int] = None) -> List[str]:
-        """Get all unique entity names from SourceFiles for filter dropdown."""
+    def get_unique_drug_names(db: Session, collection_id: Optional[int] = None) -> List[str]:
+        """Get all unique drug names from SourceFiles for filter dropdown."""
         try:
             if collection_id:
                 # Import necessary models
                 from database.database import Collection, collection_document_association
                 
-                # Get entity names only from documents in the specified collection
-                entity_names = db.query(SourceFiles.entity_name)\
+                # Get drug names only from documents in the specified collection
+                drug_names = db.query(SourceFiles.drug_name)\
                     .join(collection_document_association, SourceFiles.id == collection_document_association.c.document_id)\
                     .filter(
                         collection_document_association.c.collection_id == collection_id,
-                        SourceFiles.entity_name.isnot(None)
+                        SourceFiles.drug_name.isnot(None)
                     )\
                     .distinct()\
-                    .order_by(SourceFiles.entity_name)\
+                    .order_by(SourceFiles.drug_name)\
                     .all()
             else:
-                # Get all entity names
-                entity_names = db.query(SourceFiles.entity_name)\
+                # Get all drug names
+                drug_names = db.query(SourceFiles.drug_name)\
                     .filter(
-                        SourceFiles.entity_name.isnot(None)
+                        SourceFiles.drug_name.isnot(None)
                     )\
                     .distinct()\
-                    .order_by(SourceFiles.entity_name)\
+                    .order_by(SourceFiles.drug_name)\
                     .all()
             
-            return [name[0] for name in entity_names if name[0]]
+            return [name[0] for name in drug_names if name[0]]
         except Exception as e:
-            logger.error(f"Error getting unique entity names: {str(e)}")
+            logger.error(f"Error getting unique drug names: {str(e)}")
             return []
     
     @staticmethod
@@ -626,7 +626,7 @@ class FDAChatManagementService:
                 "source_file_id": source_file_id,
                 "file_name": fda_doc.file_name,
                 "file_url": fda_doc.file_url if fda_doc else None,
-                "entity_name": fda_doc.entity_name,
+                "drug_name": fda_doc.drug_name,
                 "user_query": query_string,
                 "response": response
             }
@@ -725,19 +725,19 @@ class FDAChatManagementService:
         if response:
             # fda_docs already contains the source files, no need to query again
             
-            # Build response with all entity information
-            entities_info = []
+            # Build response with all drug information
+            drugs_info = []
             for doc in fda_docs:
-                entities_info.append({
+                drugs_info.append({
                     "source_file_id": doc.id,  # Use doc.id instead of doc.source_file_id
                     "file_name": doc.file_name,
                     "file_url": doc.file_url,
-                    "entity_name": doc.entity_name
+                    "drug_name": doc.drug_name
                 })
             
             query_response = {
                 "source_file_ids": source_file_ids,
-                "entities_info": entities_info,
+                "drugs_info": drugs_info,
                 "user_query": query_string,
                 "response": response,
                 "comparison_mode": True
@@ -1135,13 +1135,13 @@ class FDAChatManagementService:
     @staticmethod
     def get_filter_options(db: Session) -> Dict[str, List[str]]:
         """Get available filter options from source files."""
-        # Get unique entity names from SourceFiles
-        entity_names = db.query(distinct(SourceFiles.entity_name)).filter(
-            SourceFiles.entity_name.isnot(None)
+        # Get unique drug names from SourceFiles
+        drug_names = db.query(distinct(SourceFiles.drug_name)).filter(
+            SourceFiles.drug_name.isnot(None)
         ).all()
         
         return {
-            "entity_names": ["ALL"] + [name[0] for name in entity_names if name[0]],
+            "drug_names": ["ALL"] + [name[0] for name in drug_names if name[0]],
             "manufacturers": ["ALL"],  # Not available in SourceFiles
             "document_types": ["ALL"]  # Not available in SourceFiles
         }
@@ -1227,7 +1227,7 @@ class FDAChatManagementService:
                             "source_file_id": source_file.id,
                             "file_name": source_file.file_name,
                             "file_url": source_file.file_url,
-                            "entity_name": source_file.entity_name,
+                            "drug_name": source_file.drug_name,
                             "relevance_score": round(min(relevance_score, 100), 1),  # Cap at 100%
                             "relevance_comments": comment,
                             "grade_weight": weight  # Just the number, formatting will be done in frontend
@@ -1280,7 +1280,7 @@ class FDAChatManagementService:
                 "What are the side effects?",
                 "What is the recommended dosage?",
                 "What are the contraindications?",
-                "What are the entity interactions?",
+                "What are the drug interactions?",
                 "What is the mechanism of action?"
             ]
         
@@ -1309,7 +1309,7 @@ class FDAChatManagementService:
             elif keyword in ['dose', 'dosage', 'dosing']:
                 suggestions.append("What is the recommended dosage?")
             elif keyword in ['interaction', 'interactions']:
-                suggestions.append("What are the entity interactions?")
+                suggestions.append("What are the drug interactions?")
             elif keyword in ['contraindication', 'contraindications']:
                 suggestions.append("What are the contraindications?")
             elif keyword in ['mechanism', 'action']:
@@ -1320,14 +1320,14 @@ class FDAChatManagementService:
             "What are the side effects?",
             "What is the recommended dosage?",
             "What are the contraindications?",
-            "What are the entity interactions?",
+            "What are the drug interactions?",
             "What is the mechanism of action?"
         ]
     
     @staticmethod
     def generate_smart_suggestions(
         chat_history: List[Dict[str, Any]],
-        selected_entities: List[Dict[str, Any]],
+        selected_drugs: List[Dict[str, Any]],
         last_response: str,
         db: Session
     ) -> List[str]:
@@ -1338,70 +1338,70 @@ class FDAChatManagementService:
         
         # If no chat history, return initial suggestions
         if not chat_history or len(chat_history) <= 1:
-            if len(selected_entities) > 5:
-                # For many entities, use generic terms
+            if len(selected_drugs) > 5:
+                # For many drugs, use generic terms
                 return [
-                    "Compare the indications of entities in this collection",
+                    "Compare the indications of drugs in this collection",
                     "What are the safety differences among these medications?",
-                    "Which entities have similar mechanisms of action?",
-                    "Show the most commonly prescribed entities here",
-                    "What are the newest entities in this collection?"
+                    "Which drugs have similar mechanisms of action?",
+                    "Show the most commonly prescribed drugs here",
+                    "What are the newest drugs in this collection?"
                 ]
-            elif len(selected_entities) > 1:
-                entity_names = [entity.get("entity_name", "Entity") for entity in selected_entities[:3]]  # Limit to 3
-                suffix = f" and {len(selected_entities) - 3} others" if len(selected_entities) > 3 else ""
+            elif len(selected_drugs) > 1:
+                drug_names = [drug.get("drug_name", "Drug") for drug in selected_drugs[:3]]  # Limit to 3
+                suffix = f" and {len(selected_drugs) - 3} others" if len(selected_drugs) > 3 else ""
                 return [
-                    f"Compare the indications of {' and '.join(entity_names)}{suffix}",
-                    f"What are the safety differences between these entities?",
+                    f"Compare the indications of {' and '.join(drug_names)}{suffix}",
+                    f"What are the safety differences between these drugs?",
                     f"How do dosing regimens differ among them?",
                     f"Which is most effective for common conditions?"
                 ]
-            elif len(selected_entities) == 1:
-                entity_name = selected_entities[0].get("entity_name", "this entity")
+            elif len(selected_drugs) == 1:
+                drug_name = selected_drugs[0].get("drug_name", "this drug")
                 return [
-                    f"What is the indication for {entity_name}?",
-                    f"What are the most common side effects of {entity_name}?",
-                    f"What is the recommended dosage for {entity_name}?",
-                    f"Are there any contraindications for {entity_name}?"
+                    f"What is the indication for {drug_name}?",
+                    f"What are the most common side effects of {drug_name}?",
+                    f"What is the recommended dosage for {drug_name}?",
+                    f"Are there any contraindications for {drug_name}?"
                 ]
             else:
                 return [
-                    "Search for entities by indication",
-                    "Compare multiple entities",
+                    "Search for drugs by indication",
+                    "Compare multiple drugs",
                     "Show recent FDA approvals",
-                    "Explain entity safety monitoring"
+                    "Explain drug safety monitoring"
                 ]
         
         # Analyze the last response for context
         last_response_lower = last_response.lower()
         
-        # Get entity names for personalized suggestions (limit for readability)
-        all_entitie_names = [entity.get("entity_name", "Entity") for entity in selected_entities] if selected_entities else []
-        entity_names = all_entitie_names[:3] if len(all_entitie_names) > 3 else all_entitie_names
-        has_many_entities = len(all_entitie_names) > 5
+        # Get drug names for personalized suggestions (limit for readability)
+        all_drug_names = [drug.get("drug_name", "Drug") for drug in selected_drugs] if selected_drugs else []
+        drug_names = all_drug_names[:3] if len(all_drug_names) > 3 else all_drug_names
+        has_many_drugs = len(all_drug_names) > 5
         
         # Topic-specific suggestions
         if any(term in last_response_lower for term in ["indication", "treat", "therapy", "condition"]):
-            if has_many_entities:
+            if has_many_drugs:
                 suggestions.extend([
                     "What clinical trials support these indications?",
                     "Are there off-label uses in this collection?",
-                    "Which entities are most effective for this condition?",
-                    "Compare mechanisms of action by entity class"
+                    "Which drugs are most effective for this condition?",
+                    "Compare mechanisms of action by drug class"
                 ])
-            elif len(entity_names) > 1:
+            elif len(drug_names) > 1:
                 suggestions.extend([
                     f"What clinical trials support these indications?",
-                    f"Are there off-label uses for these entities?",
+                    f"Are there off-label uses for these drugs?",
                     f"How does efficacy compare between them?",
                     f"Compare mechanisms of action"
                 ])
-            elif len(entity_names) == 1:
+            elif len(drug_names) == 1:
                 suggestions.extend([
-                    f"What clinical trials support {entity_names[0]}'s indication?",
-                    f"Are there any off-label uses for {entity_names[0]}?",
-                    f"How does {entity_names[0]} compare to standard of care?",
-                    f"What is the mechanism of action for {entity_names[0]}?"
+                    f"What clinical trials support {drug_names[0]}'s indication?",
+                    f"Are there any off-label uses for {drug_names[0]}?",
+                    f"How does {drug_names[0]} compare to standard of care?",
+                    f"What is the mechanism of action for {drug_names[0]}?"
                 ])
             else:
                 suggestions.extend([
@@ -1412,29 +1412,29 @@ class FDAChatManagementService:
                 ])
         
         if any(term in last_response_lower for term in ["side effect", "adverse", "safety", "toxicity"]):
-            if len(entity_names) > 1:
+            if len(drug_names) > 1:
                 suggestions.extend([
-                    f"What are the contraindications for {' vs '.join(entity_names)}?",
-                    f"Do any of these entities have black box warnings: {', '.join(entity_names)}?",
-                    f"Which requires more monitoring: {' or '.join(entity_names)}?",
-                    f"Compare adverse events between {' and '.join(entity_names)}",
-                    f"Compare entity interactions for {' vs '.join(entity_names)}"
+                    f"What are the contraindications for {' vs '.join(drug_names)}?",
+                    f"Do any of these drugs have black box warnings: {', '.join(drug_names)}?",
+                    f"Which requires more monitoring: {' or '.join(drug_names)}?",
+                    f"Compare adverse events between {' and '.join(drug_names)}",
+                    f"Compare drug interactions for {' vs '.join(drug_names)}"
                 ])
-            elif len(entity_names) == 1:
+            elif len(drug_names) == 1:
                 suggestions.extend([
-                    f"What are the contraindications for {entity_names[0]}?",
-                    f"Does {entity_names[0]} have any black box warnings?",
-                    f"What monitoring is required for {entity_names[0]}?",
-                    f"How common are adverse events with {entity_names[0]}?",
-                    f"What entity interactions does {entity_names[0]} have?"
+                    f"What are the contraindications for {drug_names[0]}?",
+                    f"Does {drug_names[0]} have any black box warnings?",
+                    f"What monitoring is required for {drug_names[0]}?",
+                    f"How common are adverse events with {drug_names[0]}?",
+                    f"What drug interactions does {drug_names[0]} have?"
                 ])
             else:
                 suggestions.extend([
                     "What are the contraindications?",
                     "Are there any black box warnings?",
                     "What monitoring is required during treatment?",
-                    "How do adverse events compare between entities?",
-                    "What are the entity-entity interactions?"
+                    "How do adverse events compare between drugs?",
+                    "What are the drug-drug interactions?"
                 ])
         
         if any(term in last_response_lower for term in ["dose", "dosing", "administration", "frequency"]):
@@ -1463,11 +1463,11 @@ class FDAChatManagementService:
                 "Are there special considerations for elderly patients?"
             ])
         
-        # Comparison-specific suggestions if multiple entities
-        if len(selected_entities) > 1:
+        # Comparison-specific suggestions if multiple drugs
+        if len(selected_drugs) > 1:
             if any(term in last_response_lower for term in ["compar", "differ", "versus", "vs"]):
                 suggestions.extend([
-                    "Which entity has fewer entity interactions?",
+                    "Which drug has fewer drug interactions?",
                     "Compare the onset of action",
                     "Which is more cost-effective?",
                     "Compare patient adherence rates",
@@ -1493,7 +1493,7 @@ class FDAChatManagementService:
     @staticmethod
     def generate_llm_suggestions(
         chat_history: List[Dict[str, Any]],
-        selected_entities: List[Dict[str, Any]],
+        selected_drugs: List[Dict[str, Any]],
         db: Session
     ) -> List[str]:
         """Generate intelligent suggestions using LLM based on full conversation context."""
@@ -1511,7 +1511,7 @@ class FDAChatManagementService:
                         last_response = last_item
                 
                 return FDAChatManagementService.generate_smart_suggestions(
-                    chat_history, selected_entities, last_response, db
+                    chat_history, selected_drugs, last_response, db
                 )
                 
             from utils.llm_util_gemini import get_llm
@@ -1520,12 +1520,12 @@ class FDAChatManagementService:
             # If no meaningful chat history, return empty list
             if not chat_history or len(chat_history) <= 1:
                 return FDAChatManagementService.generate_smart_suggestions(
-                    chat_history, selected_entities, "", db
+                    chat_history, selected_drugs, "", db
                 )
             
             # Build conversation context
             messages = [
-                SystemMessage(content="""You are an FDA entity information expert. Based on the conversation history, 
+                SystemMessage(content="""You are an FDA drug information expert. Based on the conversation history, 
                 generate 4-5 highly relevant follow-up questions that the user might want to ask next.
                 
                 Guidelines:
@@ -1534,9 +1534,9 @@ class FDAChatManagementService:
                 3. Explore aspects not yet covered in detail
                 4. Keep questions concise - max 10-12 words each
                 5. Focus on practical, clinically relevant information
-                6. If comparing multiple entities, use general terms like "these entities" instead of listing all names
-                7. NEVER list all entity names in a single question
-                8. For collections with many entities, use phrases like "in this collection" or "among these medications"
+                6. If comparing multiple drugs, use general terms like "these drugs" instead of listing all names
+                7. NEVER list all drug names in a single question
+                8. For collections with many drugs, use phrases like "in this collection" or "among these medications"
                 
                 Return ONLY the questions as a JSON array of strings, nothing else.""")
             ]
@@ -1552,14 +1552,14 @@ class FDAChatManagementService:
                     # If it's a string, assume it's user content
                     messages.append(HumanMessage(content=msg))
             
-            # Add context about selected entities (limit to avoid overly long suggestions)
-            if selected_entities:
-                entity_names = [entity.get("entity_name", "Unknown") for entity in selected_entities]
-                # Limit to first 5 entities to avoid extremely long suggestions
-                if len(entity_names) > 5:
-                    context = f"\nEntitys being discussed: {', '.join(entity_names[:5])} and {len(entity_names) - 5} others"
+            # Add context about selected drugs (limit to avoid overly long suggestions)
+            if selected_drugs:
+                drug_names = [drug.get("drug_name", "Unknown") for drug in selected_drugs]
+                # Limit to first 5 drugs to avoid extremely long suggestions
+                if len(drug_names) > 5:
+                    context = f"\nDrugs being discussed: {', '.join(drug_names[:5])} and {len(drug_names) - 5} others"
                 else:
-                    context = f"\nEntitys being discussed: {', '.join(entity_names)}"
+                    context = f"\nDrugs being discussed: {', '.join(drug_names)}"
                 messages.append(SystemMessage(content=context))
             
             # Add prompt for suggestions
@@ -1619,7 +1619,7 @@ class FDAChatManagementService:
                     last_response = last_item
             
             return FDAChatManagementService.generate_smart_suggestions(
-                chat_history, selected_entities, last_response, db
+                chat_history, selected_drugs, last_response, db
             )
             
         except ImportError as e:
@@ -1634,7 +1634,7 @@ class FDAChatManagementService:
                     last_response = last_item
             
             return FDAChatManagementService.generate_smart_suggestions(
-                chat_history, selected_entities, last_response, db
+                chat_history, selected_drugs, last_response, db
             )
         except Exception as e:
             logger.error(f"Error generating LLM suggestions: {e}")
@@ -1649,5 +1649,5 @@ class FDAChatManagementService:
             
             # Fallback to rule-based suggestions
             return FDAChatManagementService.generate_smart_suggestions(
-                chat_history, selected_entities, last_response, db
+                chat_history, selected_drugs, last_response, db
             )

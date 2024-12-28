@@ -19,9 +19,9 @@ interface ChatInterfaceProps {
   loading?: boolean
   placeholder?: string
   title?: string
-  selectedEntity?: {
+  selectedDrug?: {
     id: string
-    entity_name: string
+    drug_name: string
     indication: string
     manufacturer: string
   } | null
@@ -220,9 +220,9 @@ export function ChatInterface({
   messages,
   onSendMessage,
   loading = false,
-  placeholder = "Ask about this entity...",
+  placeholder = "Ask about this drug...",
   title = "AI Assistant",
-  selectedEntity,
+  selectedDrug,
 }: ChatInterfaceProps) {
   const [input, setInput] = useState("")
   const [isRichTextMode, setIsRichTextMode] = useState(false)
@@ -331,11 +331,11 @@ export function ChatInterface({
             </div>
             <h4 className="text-xl font-bold text-gray-800 mb-2">Start a Conversation</h4>
             <p className="text-gray-600 mb-6 max-w-sm mx-auto leading-relaxed">
-              I'm here to help you with entity information, safety profiles, dosing, and more.
+              I'm here to help you with drug information, safety profiles, dosing, and more.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-md mx-auto">
               <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                <p className="text-sm font-medium text-blue-800">Entity Information</p>
+                <p className="text-sm font-medium text-blue-800">Drug Information</p>
                 <p className="text-xs text-blue-600">Indications & usage</p>
               </div>
               <div className="p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
@@ -422,7 +422,7 @@ export function ChatInterface({
                             <div className="mt-2 space-y-2">
                               {message.searchResults.map((result, idx) => (
                                 <div key={idx} className="bg-gray-50 p-2 rounded text-xs">
-                                  <div className="font-medium text-gray-800">{result.entity_name}</div>
+                                  <div className="font-medium text-gray-800">{result.drug_name}</div>
                                   <div className="text-gray-600">{result.file_name}</div>
                                   <div className="text-gray-500">Relevance: {result.relevance_score}%</div>
                                 </div>
@@ -826,7 +826,7 @@ export function ChatInterface({
           <p className="text-xs text-gray-500 font-medium">
             {isRichTextMode 
               ? "Rich text enabled • Use **bold**, *italic*, - lists • Press Ctrl+Enter to send" 
-              : "Press Enter to send • Toggle rich text for formatting • Ask about entity indications, safety, or dosing"
+              : "Press Enter to send • Toggle rich text for formatting • Ask about drug indications, safety, or dosing"
             }
           </p>
           <div className="flex items-center gap-2 text-xs text-gray-400">

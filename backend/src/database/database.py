@@ -135,8 +135,7 @@ class SourceFiles(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     file_name = Column(Text, nullable=False)
     file_url = Column(Text, nullable=False)
-    entity_name = Column(Text, nullable=True)  # Generic: was entity_name
-    entity_name = Column(Text, nullable=True)  # Backward compatibility: use entity_name
+    drug_name = Column(Text, nullable=True)  # NEW COLUMN for simplified pipeline
     status = Column(String(50), nullable=False, default="PENDING")
     metadata_extracted = Column(Boolean, nullable=False, default=False)  # NEW COLUMN for metadata extraction status
     comments = Column(Text, nullable=True)
@@ -149,42 +148,28 @@ class SourceFiles(Base):
 
     creator = relationship("Users", backref="source_files")
     document_data = relationship("DocumentData", back_populates="source_file", cascade="all, delete-orphan")
-    # Generic relationship (preferred)
-    entity_metadata = relationship("EntityMetadata", back_populates="source_file", cascade="all, delete-orphan")
-    # Backward compatibility
-    entity_metadata = entity_metadata  # Alias for backward compatibility
+    drug_metadata = relationship("DrugMetadata", back_populates="source_file", cascade="all, delete-orphan")
     # Relationship to Collections
     collections = relationship("Collection", secondary=collection_document_association, back_populates="documents")
 
-# Generic EntityMetadata model (preferred)
-class EntityMetadata(Base):
-    __tablename__ = "EntityMetadata"
+class DrugMetadata(Base):
+    __tablename__ = "DrugMetadata"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     metadata_name = Column(String(255), nullable=False)
     value = Column(Text, nullable=True)
-    entity_name = Column(String(255), nullable=True)  # Generic: was entityname
-    # Backward compatibility
-    entityname = Column(String(255), nullable=True)  # Deprecated: use entity_name
+    drugname = Column(String(255), nullable=True)
     source_file_id = Column(Integer, ForeignKey("SourceFiles.id"), nullable=False)
     file_url = Column(Text, nullable=False)
     extracted_by = Column(Integer, ForeignKey("Users.id"), nullable=True)
-    extraction_prompt = Column(Text, nullable=True)
-    confidence_score = Column(Float, nullable=True)
-    metadata_details = Column(Text, nullable=True)
-    # Generic flexible fields
-    attributes = Column(JSON, nullable=True)  # Generic attributes (was active_ingredient, etc.)
-    properties = Column(JSON, nullable=True)  # Generic properties (was dosage_form, etc.)
-    features = Column(JSON, nullable=True)  # Generic features (was side_effects, etc.)
-    use_cases = Column(JSON, nullable=True)  # Generic use cases (was indications, etc.)
+    extraction_prompt = Column(Text, nullable=True)  # Store the prompt used for extraction
+    confidence_score = Column(Float, nullable=True)  # Store confidence score if available
+    metadata_details = Column(Text, nullable=True)  # Store supporting doc metadata/page numbers as JSON
     created_at = Column(DateTime, nullable=False, default=func.now())
     updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
 
-    source_file = relationship("SourceFiles", back_populates="entity_metadata")
+    source_file = relationship("SourceFiles", back_populates="drug_metadata")
     extractor = relationship("Users", backref="extracted_metadata")
-
-# Backward compatibility alias
-EntityMetadata = EntityMetadata
 
 class FDAExtractionResults(Base):
     __tablename__ = "FDAExtractionResults"
@@ -193,7 +178,7 @@ class FDAExtractionResults(Base):
     source_file_id = Column(Integer, nullable=False)
     file_name = Column(Text, nullable=False)
     document_type = Column(Text, nullable=True)
-    entity_name = Column(Text, nullable=True)
+    drug_name = Column(Text, nullable=True)
     active_ingredients = Column(JSON, nullable=True)  # Store as JSON array
     manufacturer = Column(Text, nullable=True)
     approval_date = Column(Text, nullable=True)
@@ -280,24 +265,18 @@ class TrendingSearches(Base):
     period_end = Column(DateTime)
     last_updated = Column(DateTime, default=func.now())
 
-# Generic DocumentSections model (preferred)
-class DocumentSections(Base):
-    __tablename__ = "DocumentSections"
+class DrugSections(Base):
+    __tablename__ = "DrugSections"
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     source_file_id = Column(Integer, ForeignKey("SourceFiles.id"), nullable=False)
-    entity_name = Column(String(500))  # Generic: was entity_name
-    # Backward compatibility
-    entity_name = Column(String(500))  # Deprecated: use entity_name
+    drug_name = Column(String(500))
     section_type = Column(String(100))
     section_title = Column(String(500))
     section_content = Column(Text)
     section_order = Column(Integer, default=0)
     extraction_confidence = Column(Float, default=1.0)
     created_at = Column(DateTime, default=func.now())
-
-# Backward compatibility alias
-EntitySections = DocumentSections
 
 class IndexingJob(Base):
     __tablename__ = "indexing_jobs"
@@ -535,7 +514,7 @@ def save_extraction_results(db, file_id: int, file_name: str, metadata: dict, el
             source_file_id=file_id,
             file_name=file_name,
             document_type=metadata.get("document_type"),
-            entity_name=metadata.get("entity_name"),
+            drug_name=metadata.get("drug_name"),
             active_ingredients=metadata.get("active_ingredients"),
             manufacturer=metadata.get("manufacturer"),
             approval_date=metadata.get("approval_date"),

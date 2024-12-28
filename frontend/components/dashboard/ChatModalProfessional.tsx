@@ -47,7 +47,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { EnhancedSourceDocuments } from '@/components/chat/EnhancedSourceDocuments';
-import { VirtualEntityListFixed as VirtualEntityList } from '@/components/chat/VirtualEntityListFixed';
+import { VirtualDrugListFixed as VirtualDrugList } from '@/components/chat/VirtualDrugListFixed';
 import { CollectionViewer } from '@/components/dashboard/CollectionViewer';
 import { ShareChatModal } from '@/components/dashboard/ShareChatModal';
 import { ChatHistorySidebar } from '@/components/ChatHistorySidebar';
@@ -89,8 +89,8 @@ interface ChatMessage {
 
 
 
-interface EntityDocument {
-  entityName: string;
+interface DrugDocument {
+  drugName: string;
   documents: Array<{
     id: number;
     fileName: string;
@@ -101,8 +101,8 @@ interface ChatModalProps {
   isOpen: boolean;
   onClose: () => void;
   sourceFileIds: number[];
-  entityNames: string[];
-  entityDocuments?: EntityDocument[];
+  drugNames: string[];
+  drugDocuments?: DrugDocument[]; // New prop for grouped drug information
   initialMessage?: string;
   collectionName?: string;
   collectionId?: number;
@@ -112,7 +112,7 @@ interface ChatModalProps {
   globalSearch?: boolean;  // True to enable global search fallback
 }
 
-export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, entityNames, entityDocuments, initialMessage, collectionName, collectionId, isDocXChat = false, isCollectionChat = false, isDashboardCollectionChat = false, globalSearch = false }: ChatModalProps) {
+export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, drugNames, drugDocuments, initialMessage, collectionName, collectionId, isDocXChat = false, isCollectionChat = false, isDashboardCollectionChat = false, globalSearch = false }: ChatModalProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -195,7 +195,7 @@ export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, entityNa
       
       const response = await apiService.getChatSuggestions({
         chat_history: chatHistory,
-        selected_entities: entityNames,
+        selected_drugs: effectiveDrugNames,
         last_response: lastAssistantMessage?.content
       });
       
@@ -225,27 +225,27 @@ export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, entityNa
     if (isMultipleFiles) {
       if (collectionName) {
         return [
-          "What are the common attributes across all entities?",
-          "Which entity has the most complete information?",
-          "Compare the key features of these entities",
-          "What are the main differences between these entities?",
-          "Compare the specifications and requirements"
+          "What are the common side effects across all drugs?",
+          "Which drug has fewer interactions?",
+          "Compare the dosage recommendations",
+          "What are the key differences between these drugs?",
+          "Compare effectiveness and safety profiles"
         ];
       }
       return [
-        `Compare attributes between ${entityNames.slice(0, 2).join(' and ')}`,
-        "Which entity has more complete documentation?",
-        "Compare the key specifications",
-        "What are the main differences?",
-        "Compare features and requirements"
+        `Compare side effects between ${drugNames.slice(0, 2).join(' and ')}`,
+        "Which drug has fewer interactions?",
+        "Compare the dosage recommendations",
+        "What are the key differences?",
+        "Compare effectiveness and safety profiles"
       ];
     }
     return [
-      "What are the main features?",
-      "Tell me about related entities",
-      "What are the key specifications?",
-      "Explain the main use cases",
-      "What are the important considerations?"
+      "What are the main side effects?",
+      "Tell me about drug interactions",
+      "What is the recommended dosage?",
+      "Explain the contraindications",
+      "What are the warnings and precautions?"
     ];
   };
 
@@ -254,7 +254,7 @@ export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, entityNa
       // Debug: Show which endpoint will be used
       const debugInfo = {
         sourceFileIds,
-        entityNames,
+        drugNames,
         collectionId,
         collectionName
       };
@@ -292,9 +292,9 @@ export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, entityNa
           ? `I can help you analyze information from the **${collectionName || 'collection'}** collection. What would you like to know?`
           : isMultipleFiles
             ? collectionName 
-              ? `I can help you analyze information from the **${collectionName}** collection containing ${sourceFileIds.length} documents. What would you like to know?`
-              : `I can help you compare and analyze information across these ${sourceFileIds.length} entities: **${entityNames.filter(Boolean).join(', ') || 'documents'}**. What would you like to know?`
-            : `I can provide detailed information about **${entityNames[0] || 'this document'}** based on the available documentation. What would you like to know?`;
+              ? `I can help you analyze information from the **${collectionName}** collection containing ${sourceFileIds.length} FDA documents. What would you like to know?`
+              : `I can help you compare and analyze information across these ${sourceFileIds.length} drugs: **${drugNames.filter(Boolean).join(', ') || 'FDA documents'}**. What would you like to know?`
+            : `I can provide detailed information about **${drugNames[0] || 'this FDA document'}** based on official FDA documentation. What would you like to know?`;
         
         setMessages([{
           id: '1',
@@ -306,7 +306,7 @@ export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, entityNa
       
       setTimeout(() => textareaRef.current?.focus(), 100);
     }
-  }, [isOpen, sourceFileIds, entityNames, isMultipleFiles, initialMessage, isCollectionChat, isDashboardCollectionChat, collectionName]);
+  }, [isOpen, sourceFileIds, drugNames, isMultipleFiles, initialMessage, isCollectionChat, isDashboardCollectionChat, collectionName]);
 
   useEffect(() => {
     scrollToBottom();
@@ -677,10 +677,10 @@ export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, entityNa
       
       toast.success('Chat exported as text file');
     } else if (exportFormat === 'pdf') {
-      downloadPDF(messages, collectionName, entityNames);
+      downloadPDF(messages, collectionName, drugNames);
       toast.success('Opening print dialog - select "Save as PDF"');
     } else if (exportFormat === 'html') {
-      downloadHTML(messages, collectionName, entityNames);
+      downloadHTML(messages, collectionName, drugNames);
       toast.success('Chat exported as HTML file');
     }
     
@@ -716,7 +716,7 @@ export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, entityNa
                       <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm border border-white/20">
                         <MessageCircle className="h-6 w-6" />
                       </div>
-                      {isMultipleFiles ? 'Multi-Entity Analysis Chat' : 'FDA Entity Assistant'}
+                      {isMultipleFiles ? 'Multi-Drug Analysis Chat' : 'FDA Drug Assistant'}
                     </DialogTitle>
                     
                     <p className="text-blue-100 text-sm mt-2 font-medium">
@@ -1064,7 +1064,7 @@ export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, entityNa
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        placeholder={collectionName ? `Ask anything about ${collectionName}...` : `Ask anything about ${entityNames.join(', ')}...`}
+                        placeholder={collectionName ? `Ask anything about ${collectionName}...` : `Ask anything about ${drugNames.join(', ')}...`}
                         className="w-full resize-none border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 min-h-[60px] max-h-[120px] bg-slate-50 focus:bg-white"
                         disabled={isLoading}
                       />
@@ -1214,15 +1214,15 @@ export function ChatModalProfessional({ isOpen, onClose, sourceFileIds, entityNa
                         </ScrollArea>
                       </>
                     ) : rightPanelView === 'collection' ? (
-                      /* Collection Details View - Virtual Entity List */
+                      /* Collection Details View - Virtual Drug List */
                       <div className="flex-1 overflow-hidden p-4">
                         {collectionId ? (
-                          <VirtualEntityList
+                          <VirtualDrugList
                             collectionId={collectionId}
                             collectionName={collectionName || 'Collection'}
-                            onEntityClick={(entityName) => {
-                              // Optionally auto-fill the input with the entity name
-                              setInputMessage(prev => prev ? `${prev} ${entityName}` : entityName);
+                            onDrugClick={(drugName) => {
+                              // Optionally auto-fill the input with the drug name
+                              setInputMessage(prev => prev ? `${prev} ${drugName}` : drugName);
                               textareaRef.current?.focus();
                             }}
                             height={350}

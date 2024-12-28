@@ -36,14 +36,14 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  entityName?: string;
-  entityNames?: string[];
+  drugName?: string;
+  drugNames?: string[];
   isLoading?: boolean;
 }
 
-interface EntityInfo {
+interface DrugInfo {
   source_file_id: number;
-  entity_name: string;
+  drug_name: string;
   file_name: string;
 }
 
@@ -71,7 +71,7 @@ function ChatPageContent() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [entitieInfo, setEntityInfo] = useState<EntityInfo[]>([]);
+  const [drugInfo, setDrugInfo] = useState<DrugInfo[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [sessionId, setSessionId] = useState<string>('');
   const [collectionInfo, setCollectionInfo] = useState<{name: string; description?: string} | null>(null);
@@ -83,11 +83,11 @@ function ChatPageContent() {
     const newSessionId = `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     setSessionId(newSessionId);
     
-    // Load entity or collection information
+    // Load drug or collection information
     if (isCollection) {
       loadCollectionInfo();
     } else {
-      loadEntityInfo();
+      loadDrugInfo();
     }
     
     // Add welcome message
@@ -96,7 +96,7 @@ function ChatPageContent() {
       // Show loading state while collection info loads
       welcomeContent = `Loading collection information...`;
     } else if (isMultipleFiles) {
-      welcomeContent = `Ready to analyze and compare multiple FDA entity documents.
+      welcomeContent = `Ready to analyze and compare multiple FDA drug documents.
 
 What would you like to know?`;
     } else {
@@ -118,8 +118,8 @@ What would you like to know about this medication?`;
 
   // Update welcome message when collection info loads
   useEffect(() => {
-    if (isCollection && collectionInfo && entitieInfo.length > 0) {
-      const welcomeContent = `Ready to analyze the **"${collectionInfo.name}"** collection (${entitieInfo.length} documents)${collectionInfo.description ? ` - ${collectionInfo.description}` : ''}.
+    if (isCollection && collectionInfo && drugInfo.length > 0) {
+      const welcomeContent = `Ready to analyze the **"${collectionInfo.name}"** collection (${drugInfo.length} documents)${collectionInfo.description ? ` - ${collectionInfo.description}` : ''}.
 
 How can I help you explore this collection?`;
 
@@ -136,7 +136,7 @@ How can I help you explore this collection?`;
         return prev;
       });
     }
-  }, [isCollection, collectionInfo, entitieInfo]);
+  }, [isCollection, collectionInfo, drugInfo]);
 
   useEffect(() => {
     scrollToBottom();
@@ -156,37 +156,37 @@ How can I help you explore this collection?`;
         description: response.collection.description
       });
       
-      // Load entity info from collection documents
-      const entitieInfoList: EntityInfo[] = [];
+      // Load drug info from collection documents
+      const drugInfoList: DrugInfo[] = [];
       for (const doc of response.documents) {
-        entitieInfoList.push({
+        drugInfoList.push({
           source_file_id: doc.id,
-          entity_name: doc.entity_name || 'Unknown Entity',
+          drug_name: doc.drug_name || 'Unknown Drug',
           file_name: doc.file_name
         });
       }
-      setEntityInfo(entitieInfoList);
+      setDrugInfo(drugInfoList);
     } catch (error) {
       console.error('Failed to load collection information:', error);
     }
   };
 
-  const loadEntityInfo = async () => {
+  const loadDrugInfo = async () => {
     try {
-      const entitieInfoList: EntityInfo[] = [];
+      const drugInfoList: DrugInfo[] = [];
       
       for (const fileId of fileIds) {
         const response = await apiService.getSourceFile(fileId);
-        entitieInfoList.push({
+        drugInfoList.push({
           source_file_id: fileId,
-          entity_name: response.entity_name || 'Unknown Entity',
+          drug_name: response.drug_name || 'Unknown Drug',
           file_name: response.file_name
         });
       }
       
-      setEntityInfo(entitieInfoList);
+      setDrugInfo(drugInfoList);
     } catch (error) {
-      console.error('Failed to load entity information:', error);
+      console.error('Failed to load drug information:', error);
     }
   };
 
@@ -205,19 +205,19 @@ How can I help you explore this collection?`;
         ];
       } else if (isMultipleFiles) {
         defaultSuggestions = [
-          'Compare the indications of these entities',
+          'Compare the indications of these drugs',
           'What are the main differences in side effects?',
           'Compare the dosing regimens',
-          'Which entity has more entity interactions?',
+          'Which drug has more drug interactions?',
           'Compare the mechanisms of action'
         ];
       } else {
         defaultSuggestions = [
-          'What is this entity used for?',
+          'What is this drug used for?',
           'What are the common side effects?',
           'What is the recommended dosage?',
           'Are there any contraindications?',
-          'What are the entity interactions?'
+          'What are the drug interactions?'
         ];
       }
       
@@ -236,7 +236,7 @@ How can I help you explore this collection?`;
       role: 'user',
       content: message,
       timestamp: new Date(),
-      entityNames: entitieInfo.map(d => d.entity_name)
+      drugNames: drugInfo.map(d => d.drug_name)
     };
     
     setMessages(prev => [...prev, userMessage]);
@@ -260,7 +260,7 @@ How can I help you explore this collection?`;
       if (isCollection && collectionId) {
         // For collections, we need to query multiple documents
         // Get all file IDs from the collection's documents
-        const collectionFileIds = entitieInfo.map(d => d.source_file_id);
+        const collectionFileIds = drugInfo.map(d => d.source_file_id);
         
         const requestPayload = {
           message: message,
@@ -297,7 +297,7 @@ How can I help you explore this collection?`;
         let enhancedContent = response.content;
         if (isCollection && collectionInfo && messages.length === 1) {
           // Only add context for the first real response (after welcome message)
-          const collectionContext = `Based on analysis of ${entitieInfo.length} documents in the "${collectionInfo.name}" collection:\n\n`;
+          const collectionContext = `Based on analysis of ${drugInfo.length} documents in the "${collectionInfo.name}" collection:\n\n`;
           enhancedContent = collectionContext + response.content;
         }
         
@@ -306,7 +306,7 @@ How can I help you explore this collection?`;
           role: 'assistant',
           content: enhancedContent,
           timestamp: new Date(response.timestamp || Date.now()),
-          entityNames: entitieInfo.map(d => d.entity_name)
+          drugNames: drugInfo.map(d => d.drug_name)
         }];
       });
       
@@ -327,7 +327,7 @@ How can I help you explore this collection?`;
           contextualSuggestions = [
             'Tell me more about the efficacy differences',
             'Compare the safety profiles in detail',
-            'Which entity is preferred for elderly patients?',
+            'Which drug is preferred for elderly patients?',
             'Compare the clinical trial results',
             'What about cost considerations?'
           ];
@@ -335,7 +335,7 @@ How can I help you explore this collection?`;
           contextualSuggestions = [
             'Tell me more about the clinical trials',
             'What about use in special populations?',
-            'How does it compare to similar entities?',
+            'How does it compare to similar drugs?',
             'What monitoring is required?',
             'Are there any recent safety updates?'
           ];
@@ -565,14 +565,14 @@ How can I help you explore this collection?`;
                     Collection: {collectionInfo.name}
                   </Badge>
                 ) : (
-                  entitieInfo.map((entity, index) => (
+                  drugInfo.map((drug, index) => (
                     <Badge 
-                      key={entity.source_file_id} 
+                      key={drug.source_file_id} 
                       variant="outline" 
                       className="border-gray-300 text-gray-700"
                     >
                       <FileText className="h-3 w-3 mr-1" />
-                      {entity.entity_name}
+                      {drug.drug_name}
                     </Badge>
                   ))
                 )}
@@ -596,12 +596,12 @@ How can I help you explore this collection?`;
         {/* Page Title */}
         <div className="mb-6">
           <h1 className="page-title">
-            {isCollection ? 'Collection Chat' : isMultipleFiles ? 'Multi-Entity Analysis' : 'Entity Information Chat'}
+            {isCollection ? 'Collection Chat' : isMultipleFiles ? 'Multi-Drug Analysis' : 'Drug Information Chat'}
           </h1>
           <p className="text-gray-600 mt-1">
             {isCollection 
               ? `Explore documents in "${collectionInfo?.name || 'this collection'}" with AI assistance`
-              : `Ask questions about ${isMultipleFiles ? 'these FDA-approved entities' : 'this FDA-approved entity'} based on official documentation`
+              : `Ask questions about ${isMultipleFiles ? 'these FDA-approved drugs' : 'this FDA-approved drug'} based on official documentation`
             }
           </p>
         </div>
@@ -619,8 +619,8 @@ How can I help you explore this collection?`;
                         <div className="bg-gradient-to-br from-blue-500 to-blue-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
                           <Bot className="h-10 w-10 text-white" />
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Welcome to FDA Entity Chat</h3>
-                        <p className="text-gray-600 mb-6">I'm here to help you understand FDA entity documentation. Ask me anything!</p>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Welcome to FDA Drug Chat</h3>
+                        <p className="text-gray-600 mb-6">I'm here to help you understand FDA drug documentation. Ask me anything!</p>
                         <div className="flex flex-wrap justify-center gap-2">
                           {suggestions.slice(0, 3).map((suggestion, index) => (
                             <Button
@@ -802,16 +802,16 @@ How can I help you explore this collection?`;
                     {collectionInfo.description && (
                       <p className="text-xs text-indigo-700 ml-6">{collectionInfo.description}</p>
                     )}
-                    <p className="text-xs text-indigo-600 ml-6 mt-1">{entitieInfo.length} documents in collection</p>
+                    <p className="text-xs text-indigo-600 ml-6 mt-1">{drugInfo.length} documents in collection</p>
                   </div>
                 )}
-                {entitieInfo.map((entity) => (
-                  <div key={entity.source_file_id} className="p-3 bg-gray-50 rounded-lg space-y-1 border border-gray-100">
+                {drugInfo.map((drug) => (
+                  <div key={drug.source_file_id} className="p-3 bg-gray-50 rounded-lg space-y-1 border border-gray-100">
                     <div className="flex items-center gap-2">
                       <Pill className="h-4 w-4 text-indigo-600" />
-                      <p className="font-medium text-sm text-gray-900">{entity.entity_name}</p>
+                      <p className="font-medium text-sm text-gray-900">{drug.drug_name}</p>
                     </div>
-                    <p className="text-xs text-gray-600 ml-6">{entity.file_name}</p>
+                    <p className="text-xs text-gray-600 ml-6">{drug.file_name}</p>
                   </div>
                 ))}
                 <div className="pt-4 border-t border-gray-200">

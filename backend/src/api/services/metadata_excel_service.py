@@ -39,15 +39,15 @@ class MetadataExcelService:
         """
         # Create a DataFrame with column headers
         template_data = {
-            MetadataExcelService.EXCEL_COLUMNS['name']: ['Example: Entity Name', 'Example: Indication'],
+            MetadataExcelService.EXCEL_COLUMNS['name']: ['Example: Drug Name', 'Example: Indication'],
             MetadataExcelService.EXCEL_COLUMNS['description']: [
-                'The brand name of the entity',
+                'The brand name of the drug',
                 'Primary therapeutic indication'
             ],
             MetadataExcelService.EXCEL_COLUMNS['data_type']: ['text', 'text'],
             MetadataExcelService.EXCEL_COLUMNS['extraction_prompt']: [
-                'Extract the brand name of this entity',
-                'Extract the primary indication for this entity'
+                'Extract the brand name of this drug',
+                'Extract the primary indication for this drug'
             ],
             MetadataExcelService.EXCEL_COLUMNS['validation_rules']: ['{}', '{"required": true}'],
             MetadataExcelService.EXCEL_COLUMNS['is_active']: ['TRUE', 'TRUE'],

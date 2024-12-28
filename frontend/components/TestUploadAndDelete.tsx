@@ -18,13 +18,13 @@ interface TestFile {
   id: number;
   file_name: string;
   file_url: string;
-  entity_name?: string;
+  drug_name?: string;
   description?: string;
 }
 
 export default function TestUploadAndDelete() {
   const [files, setFiles] = useState<TestFile[]>([
-    { id: 1, file_name: "test-document.pdf", file_url: "https://example.com/test.pdf", entity_name: "Test Entity" }
+    { id: 1, file_name: "test-document.pdf", file_url: "https://example.com/test.pdf", drug_name: "Test Drug" }
   ]);
   
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -35,7 +35,7 @@ export default function TestUploadAndDelete() {
   const [uploadForm, setUploadForm] = useState({
     file_name: '',
     file_url: '',
-    entity_name: '',
+    drug_name: '',
     description: ''
   });
 
@@ -49,12 +49,12 @@ export default function TestUploadAndDelete() {
       id: Date.now(),
       file_name: uploadForm.file_name,
       file_url: uploadForm.file_url,
-      entity_name: uploadForm.entity_name,
+      drug_name: uploadForm.drug_name,
       description: uploadForm.description
     };
     
     setFiles([...files, newFile]);
-    setUploadForm({ file_name: '', file_url: '', entity_name: '', description: '' });
+    setUploadForm({ file_name: '', file_url: '', drug_name: '', description: '' });
     setIsUploadModalOpen(false);
     setLoading(false);
   };
@@ -107,8 +107,8 @@ export default function TestUploadAndDelete() {
                   <div>
                     <h3 className="font-medium">{file.file_name}</h3>
                     <p className="text-sm text-gray-600">{file.file_url}</p>
-                    {file.entity_name && (
-                      <p className="text-sm text-blue-600">Entity: {file.entity_name}</p>
+                    {file.drug_name && (
+                      <p className="text-sm text-blue-600">Drug: {file.drug_name}</p>
                     )}
                   </div>
                   <Button 
@@ -169,11 +169,11 @@ export default function TestUploadAndDelete() {
 
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Entity Name
+                  Drug Name
                 </label>
                 <Input
-                  value={uploadForm.entity_name}
-                  onChange={(e) => setUploadForm({...uploadForm, entity_name: e.target.value})}
+                  value={uploadForm.drug_name}
+                  onChange={(e) => setUploadForm({...uploadForm, drug_name: e.target.value})}
                   placeholder="e.g., Aspirin"
                 />
               </div>

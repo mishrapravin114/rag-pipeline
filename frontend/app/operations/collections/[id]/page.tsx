@@ -64,7 +64,7 @@ interface Document {
   id: number;
   file_name: string;
   file_url: string;
-  entity_name?: string;
+  drug_name?: string;
   status: string;
   collection_status?: string;
   error_message?: string;
@@ -103,8 +103,8 @@ export default function CollectionDetailsPage() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [filePreviewData, setFilePreviewData] = useState<Array<{
     file: File;
-    entityName: string;
-    originalEntityName: string;
+    drugName: string;
+    originalDrugName: string;
   }>>([]);
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -114,7 +114,7 @@ export default function CollectionDetailsPage() {
   const [excelData, setExcelData] = useState<Array<{
     file_name: string;
     file_url: string;
-    entity_name?: string;
+    drug_name?: string;
     comments?: string;
     us_ma_date?: string;
   }>>([]);
@@ -336,24 +336,24 @@ export default function CollectionDetailsPage() {
     
     setSelectedFiles(pdfFiles);
     
-    // Extract entity names from filenames
+    // Extract drug names from filenames
     const previewData = pdfFiles.map(file => {
       const fileName = file.name;
-      const entityName = fileName.split('_')[0] || fileName.replace('.pdf', '');
+      const drugName = fileName.split('_')[0] || fileName.replace('.pdf', '');
       return {
         file,
-        entityName,
-        originalEntityName: entityName
+        drugName,
+        originalDrugName: drugName
       };
     });
     
     setFilePreviewData(previewData);
   };
 
-  // Update entity name for a file
-  const updateEntityName = (index: number, newEntityName: string) => {
+  // Update drug name for a file
+  const updateDrugName = (index: number, newDrugName: string) => {
     const updated = [...filePreviewData];
-    updated[index].entityName = newEntityName;
+    updated[index].drugName = newDrugName;
     setFilePreviewData(updated);
   };
 
@@ -454,7 +454,7 @@ export default function CollectionDetailsPage() {
             const item = {
               file_name: fileName.toString().trim(),
               file_url: fileUrl.toString().trim(),
-              entity_name: (rowData.entity_name || rowData.entityname || rowData['entity name'] || '')?.toString().trim() || undefined,
+              drug_name: (rowData.drug_name || rowData.drugname || rowData['drug name'] || '')?.toString().trim() || undefined,
               comments: (rowData.comments || rowData.description || rowData.notes || '')?.toString().trim() || undefined,
               us_ma_date: (rowData.us_ma_date || rowData['us ma date'] || rowData['us_ma_date'] || '')?.toString().trim() || undefined
             };
@@ -544,10 +544,10 @@ export default function CollectionDetailsPage() {
       
       // Upload files one by one
       for (let i = 0; i < filePreviewData.length; i++) {
-        const { file, entityName } = filePreviewData[i];
+        const { file, drugName } = filePreviewData[i];
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('entity_name', entityName);
+        formData.append('drug_name', drugName);
         formData.append('collection_id', collectionId.toString());
         
         try {
@@ -1138,7 +1138,7 @@ export default function CollectionDetailsPage() {
                           className="group"
                         >
                           <h3 className="text-lg font-medium text-gray-900 mb-1 group-hover:text-blue-600 transition-colors flex items-center gap-2">
-                            {doc.entity_name ? `${doc.entity_name} - ${doc.file_name}` : doc.file_name}
+                            {doc.drug_name ? `${doc.drug_name} - ${doc.file_name}` : doc.file_name}
                             <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </h3>
                           <p className="text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors mb-2">
@@ -1392,7 +1392,7 @@ export default function CollectionDetailsPage() {
                           />
                           <div className="flex-1">
                             <h4 className="font-medium text-gray-900">
-                              {doc.entity_name ? `${doc.entity_name} - ${doc.file_name}` : doc.file_name}
+                              {doc.drug_name ? `${doc.drug_name} - ${doc.file_name}` : doc.file_name}
                             </h4>
                             <p className="text-sm text-gray-600">{doc.file_url}</p>
                           </div>
@@ -1410,7 +1410,7 @@ export default function CollectionDetailsPage() {
                   <div className="space-y-4">
                     <div className="mb-4">
                       <p className="text-sm text-gray-600 mb-4">
-                        Upload PDF files directly to this collection. Entity names will be extracted from filenames (text before underscore).
+                        Upload PDF files directly to this collection. Drug names will be extracted from filenames (text before underscore).
                       </p>
                       
                       {/* File input */}
@@ -1460,7 +1460,7 @@ export default function CollectionDetailsPage() {
                                   File Name
                                 </th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Entity Name
+                                  Drug Name
                                 </th>
                                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                   Size
@@ -1478,8 +1478,8 @@ export default function CollectionDetailsPage() {
                                   </td>
                                   <td className="px-4 py-3">
                                     <Input
-                                      value={item.entityName}
-                                      onChange={(e) => updateEntityName(index, e.target.value)}
+                                      value={item.drugName}
+                                      onChange={(e) => updateDrugName(index, e.target.value)}
                                       className="w-full max-w-xs text-sm"
                                       disabled={isUploading}
                                     />
@@ -1583,7 +1583,7 @@ export default function CollectionDetailsPage() {
                                 <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">Row</th>
                                 <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">File Name</th>
                                 <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">File URL</th>
-                                <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">Entity Name</th>
+                                <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">Drug Name</th>
                                 <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">Comments</th>
                                 <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">US MA Date</th>
                               </tr>
@@ -1596,7 +1596,7 @@ export default function CollectionDetailsPage() {
                                   <td className="px-3 py-2 text-blue-600 truncate max-w-xs">
                                     {item.file_url}
                                   </td>
-                                  <td className="px-3 py-2 text-gray-600">{item.entity_name || '-'}</td>
+                                  <td className="px-3 py-2 text-gray-600">{item.drug_name || '-'}</td>
                                   <td className="px-3 py-2 text-gray-600 truncate max-w-xs">
                                     {item.comments || '-'}
                                   </td>
@@ -1761,7 +1761,7 @@ export default function CollectionDetailsPage() {
             isOpen={isChatModalOpen}
             onClose={() => setIsChatModalOpen(false)}
             sourceFileIds={[]}  // Pass empty array to query entire collection
-            entityNames={documents.filter(doc => doc.collection_status === 'INDEXED').map(doc => doc.entity_name || doc.file_name)}
+            drugNames={documents.filter(doc => doc.collection_status === 'INDEXED').map(doc => doc.drug_name || doc.file_name)}
             collectionName={collection.name}
             collectionId={collection.id}
             isCollectionChat={true}  // Collection page chat uses old endpoint
@@ -1878,9 +1878,9 @@ export default function CollectionDetailsPage() {
                                         <p className="text-sm font-medium text-gray-900">
                                           {doc.file_name}
                                         </p>
-                                        {doc.entity_name && (
+                                        {doc.drug_name && (
                                           <p className="text-xs text-gray-500">
-                                            Entity: {doc.entity_name}
+                                            Drug: {doc.drug_name}
                                           </p>
                                         )}
                                       </div>
@@ -2053,8 +2053,8 @@ export default function CollectionDetailsPage() {
                           <div className="flex items-center justify-between">
                             <div>
                               <span className="font-medium text-green-900">Row {item.row}: {item.file_name}</span>
-                              {item.entity_name && (
-                                <span className="text-sm text-green-700 ml-2">({item.entity_name})</span>
+                              {item.drug_name && (
+                                <span className="text-sm text-green-700 ml-2">({item.drug_name})</span>
                               )}
                             </div>
                             <div className="text-sm text-green-600">ID: {item.id}</div>

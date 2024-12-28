@@ -96,9 +96,9 @@ export function EnhancedSourceDocuments({ documents, className = "" }: EnhancedS
                                     {(doc?.filename || 'Unknown').replace('Unknown - ', '')}
                                   </a>
                                 </h5>
-                                {doc?.entity_name && !doc.entity_name.includes('Unknown') && (
+                                {doc?.drug_name && !doc.drug_name.includes('Unknown') && (
                                   <p className="text-xs text-gray-600 mt-0.5">
-                                    Entity: {doc.entity_name}
+                                    Drug: {doc.drug_name}
                                   </p>
                                 )}
                               </div>
