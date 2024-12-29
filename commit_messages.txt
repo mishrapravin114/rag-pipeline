@@ -1,0 +1,129 @@
+# Realistic Commit Messages by Category
+# Use these as templates when splitting commits
+
+# INITIAL SETUP
+feat: initialize RAG pipeline project structure
+chore: set up project dependencies and configuration
+docs: add initial project documentation
+config: configure development environment
+
+# CONFIG
+config: add environment variable management
+config: set up database connection settings
+config: configure Qdrant vector database settings
+config: add domain-based configuration abstraction
+config: implement settings validation
+
+# BACKEND
+feat(backend): implement FastAPI application structure
+feat(backend): add authentication service
+feat(backend): implement JWT token management
+feat(backend): add database session management
+feat(backend): implement entity metadata service
+feat(backend): add chat management service
+feat(backend): implement search service
+feat(backend): add document upload endpoint
+feat(backend): implement metadata extraction
+feat(backend): add collection management
+refactor(backend): restructure API routers
+refactor(backend): improve error handling
+perf(backend): optimize database queries
+
+# DATABASE
+feat(db): create entity metadata schema
+feat(db): add source files table
+feat(db): implement document sections model
+feat(db): add collection association tables
+feat(db): create user authentication tables
+feat(db): add search history tracking
+refactor(db): migrate to entity-based naming
+refactor(db): optimize table indexes
+
+# MIGRATIONS
+feat(migration): add entity metadata migration
+feat(migration): create generic entity schema
+feat(migration): migrate drug references to entity
+feat(migration): add backward compatibility layer
+fix(migration): correct schema constraints
+
+# CORE (Entity Abstraction)
+feat(core): introduce domain configuration system
+feat(core): implement entity-to-domain mapping
+feat(core): add entity file matcher utility
+feat(core): create generic entity model
+refactor(core): decouple entity from domain terminology
+refactor(core): implement entity abstraction layer
+
+# FRONTEND
+feat(frontend): set up Next.js application
+feat(frontend): implement authentication UI
+feat(frontend): add dashboard layout
+feat(frontend): create entity search interface
+feat(frontend): implement chat interface
+feat(frontend): add entity details modal
+feat(frontend): create collection viewer
+refactor(frontend): rename DrugCard to EntityCard
+refactor(frontend): update entity naming throughout
+refactor(frontend): improve component structure
+ui: enhance entity card design
+ui: improve search results display
+
+# RAG PIPELINE
+feat(rag): implement document chunking strategy
+feat(rag): add vector embedding generation
+feat(rag): implement hybrid search (BM25 + semantic)
+feat(rag): add multi-query generation
+feat(rag): implement semantic caching
+feat(rag): add cross-encoder reranking
+feat(rag): optimize retrieval pipeline
+
+# REFACTORING
+refactor: rename drug terminology to entity
+refactor: update API endpoints to use entity
+refactor: standardize naming conventions
+refactor: improve code organization
+refactor: extract common utilities
+
+# PERFORMANCE
+perf: optimize vector search queries
+perf: improve database connection pooling
+perf: add query result caching
+perf: optimize frontend bundle size
+perf: reduce API response times
+
+# TESTING
+test: add unit tests for entity services
+test: implement integration tests
+test: add frontend component tests
+test: create API endpoint tests
+
+# DOCUMENTATION
+docs: update README with setup instructions
+docs: add deployment guide
+docs: document API endpoints
+docs: create frontend setup guide
+docs: add architecture overview
+docs: update license information
+
+# CLEANUP
+chore: remove unused imports
+chore: clean up deprecated code
+chore: remove unrequired symbols
+chore: fix linting issues
+chore: update dependencies
+cleanup: remove duplicate files
+cleanup: organize project structure
+
+# FEATURES
+feat: add multi-entity chat support
+feat: implement collection-based search
+feat: add metadata group management
+feat: create admin user management
+feat: add document metadata extraction
+
+# FINAL
+chore: final code cleanup
+docs: update project documentation
+chore: prepare for release
+docs: finalize README and guides
+
