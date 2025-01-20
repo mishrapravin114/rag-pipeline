@@ -11,7 +11,7 @@ import os
 import json
 from datetime import datetime, timedelta
 
-from database.database import get_db_session, SourceFiles, ChatHistory, FDAExtractionResults, DrugSections, SearchHistory
+from database.database import get_db_session, SourceFiles, ChatHistory, FDAExtractionResults, EntitySections, SearchHistory
 from api.routers.simple_auth import get_current_user
 # Import will be done inside the function to avoid circular imports
 from utils.qdrant_util import QdrantUtil
@@ -24,7 +24,7 @@ router = APIRouter(tags=["additional"])
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
-    drug_id: Optional[str] = None
+    entity_id: Optional[str] = None
 
 class ChatResponse(BaseModel):
     id: str
@@ -42,38 +42,38 @@ def get_db():
         db.close()
 
 # Document download endpoint
-@router.get("/api/documents/download/{drug_id}")
-async def download_drug_document(
-    drug_id: int,
+@router.get("/api/documents/download/{entity_id}")
+async def download_entitie_document(
+    entity_id: int,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Download drug PDF document."""
+    """Download entity PDF document."""
     try:
-        # First, try to get the drug from FDAExtractionResults
-        drug = db.query(FDAExtractionResults).filter(
-            FDAExtractionResults.id == drug_id
+        # First, try to get the entity from FDAExtractionResults
+        entity = db.query(FDAExtractionResults).filter(
+            FDAExtractionResults.id == entity_id
         ).first()
         
-        if drug:
-            # Get source file using the source_file_id from the drug
+        if entity:
+            # Get source file using the source_file_id from the entity
             source_file = db.query(SourceFiles).filter(
-                SourceFiles.id == drug.source_file_id
+                SourceFiles.id == entity.source_file_id
             ).first()
         else:
             # Fallback: try direct lookup in SourceFiles
             source_file = db.query(SourceFiles).filter(
-                SourceFiles.id == drug_id
+                SourceFiles.id == entity_id
             ).first()
         
         if not source_file:
-            logger.error(f"No source file found for drug_id: {drug_id}")
+            logger.error(f"No source file found for entity_id: {entity_id}")
             # Return more helpful error info
-            drug_count = db.query(FDAExtractionResults).count()
+            entitie_count = db.query(FDAExtractionResults).count()
             sf_count = db.query(SourceFiles).count()
             raise HTTPException(
                 status_code=404, 
-                detail=f"Document not found. Drug ID: {drug_id}, Total drugs in DB: {drug_count}, Total source files: {sf_count}"
+                detail=f"Document not found. Entity ID: {entity_id}, Total entities in DB: {entitie_count}, Total source files: {sf_count}"
             )
         
         # Check if file exists locally
@@ -159,7 +159,7 @@ async def chat_with_system(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Chat with the FDA drug information system."""
+    """Chat with the FDA entity information system."""
     try:
         from api.services.chat_management_service import FDAChatManagementService
         from api.services.analytics_service import AnalyticsService
@@ -167,11 +167,11 @@ async def chat_with_system(
         # Generate session ID if not provided
         session_id = request.session_id or f"session_{datetime.now().timestamp()}"
         
-        # If drug_id is provided, use it as source_file_id for context
-        if request.drug_id:
+        # If entity_id is provided, use it as source_file_id for context
+        if request.entity_id:
             # Query specific document
             result = await FDAChatManagementService.query_fda_document(
-                source_file_id=int(request.drug_id),
+                source_file_id=int(request.entity_id),
                 query_string=request.message,
                 session_id=session_id,
                 user_id=1,  # Default user ID
@@ -180,14 +180,14 @@ async def chat_with_system(
             
             if result:
                 # Track chat interaction
-                drug_info = result.get("drug_info", {})
-                drug_name = drug_info.get("drug_name") if drug_info else None
+                entitie_info = result.get("entitie_info", {})
+                entity_name = entitie_info.get("entity_name") if entitie_info else None
                 
                 await AnalyticsService.track_chat_interaction(
                     db=db,
                     username=current_user.get("username"),
                     chat_query=request.message,
-                    drug_context=drug_name,
+                    entitie_context=entity_name,
                     session_id=session_id
                 )
                 
@@ -211,9 +211,9 @@ async def chat_with_system(
             response_parts = [f"Here's what I found about '{request.message}':\n"]
             
             for i, result in enumerate(results[:3], 1):  # Top 3 results
-                drug_name = result.get('drug_name', 'Unknown drug')
+                entity_name = result.get('entity_name', 'Unknown entity')
                 relevance = result.get('relevance_comments', '')
-                response_parts.append(f"\n{i}. **{drug_name}**: {relevance}")
+                response_parts.append(f"\n{i}. **{entity_name}**: {relevance}")
             
             response_content = "\n".join(response_parts)
         else:
@@ -287,8 +287,8 @@ async def get_dashboard_stats(
         from sqlalchemy import func, distinct, case
         from datetime import datetime, timedelta
         
-        # Get total unique drugs (from source files since FDAExtractionResults might be empty)
-        total_drugs = db.query(SourceFiles).count()
+        # Get total unique entities (from source files since FDAExtractionResults might be empty)
+        total_entities = db.query(SourceFiles).count()
         
         # Get unique manufacturers (from FDAExtractionResults if available)
         manufacturers_count = db.query(func.count(distinct(FDAExtractionResults.manufacturer))).scalar() or 0
@@ -321,8 +321,8 @@ async def get_dashboard_stats(
         # Get total searches from SearchHistory
         total_searches = db.query(SearchHistory).count()
         
-        # Get trending drugs from SearchHistory with proper aggregation
-        trending_drugs_query = db.query(
+        # Get trending entities from SearchHistory with proper aggregation
+        trending_entities_query = db.query(
             SearchHistory.search_query,
             func.count(SearchHistory.id).label('search_count')
         ).filter(
@@ -334,14 +334,14 @@ async def get_dashboard_stats(
             func.count(SearchHistory.id).desc()
         ).limit(10).all()
         
-        trending_drugs = []
-        if trending_drugs_query:
-            for drug_name, count in trending_drugs_query:
-                # Clean up drug names
-                clean_name = drug_name.strip().upper()
+        trending_entities = []
+        if trending_entities_query:
+            for entity_name, count in trending_entities_query:
+                # Clean up entity names
+                clean_name = entity_name.strip().upper()
                 if clean_name:
-                    trending_drugs.append({
-                        "drug_name": clean_name,
+                    trending_entities.append({
+                        "entity_name": clean_name,
                         "search_count": count
                     })
         else:
@@ -351,26 +351,26 @@ async def get_dashboard_stats(
             ).limit(5).all()
             
             for idx, sf in enumerate(source_files):
-                drug_name = sf.drug_name if sf.drug_name else sf.file_name.replace(".pdf", "").replace("_", " ").upper()
+                entity_name = sf.entity_name if sf.entity_name else sf.file_name.replace(".pdf", "").replace("_", " ").upper()
                 
-                # Clean up drug names
-                if "lbl" in drug_name.lower():
-                    drug_name = drug_name.split("LBL")[0].strip()
-                if "approved" in drug_name.lower():
-                    drug_name = drug_name.split("APPROVED")[0].strip()
+                # Clean up entity names
+                if "lbl" in entity_name.lower():
+                    entity_name = entity_name.split("LBL")[0].strip()
+                if "approved" in entity_name.lower():
+                    entity_name = entity_name.split("APPROVED")[0].strip()
                 
-                # Map known drug names
-                if "augtyro" in drug_name.lower():
-                    drug_name = "AUGTYRO"
-                elif "krazati" in drug_name.lower():
-                    drug_name = "KRAZATI"
-                elif "jemperli" in drug_name.lower():
-                    drug_name = "JEMPERLI"
-                elif "gavreto" in drug_name.lower():
-                    drug_name = "GAVRETO"
+                # Map known entity names
+                if "augtyro" in entity_name.lower():
+                    entity_name = "AUGTYRO"
+                elif "krazati" in entity_name.lower():
+                    entity_name = "KRAZATI"
+                elif "jemperli" in entity_name.lower():
+                    entity_name = "JEMPERLI"
+                elif "gavreto" in entity_name.lower():
+                    entity_name = "GAVRETO"
                 
-                trending_drugs.append({
-                    "drug_name": drug_name,
+                trending_entities.append({
+                    "entity_name": entity_name,
                     "search_count": 50 - (idx * 10)  # Simulated decreasing count
                 })
         
@@ -386,45 +386,45 @@ async def get_dashboard_stats(
         ).limit(15).all()
         
         for chat in recent_chats:
-            # Extract drug name from request_details if available
-            drug_name = None
+            # Extract entity name from request_details if available
+            entity_name = None
             if chat.request_details:
                 try:
                     request_data = json.loads(chat.request_details)
-                    # Check various possible locations for drug name
+                    # Check various possible locations for entity name
                     if isinstance(request_data, dict):
-                        # Direct drug_name field
-                        drug_name = request_data.get('drug_name')
+                        # Direct entity_name field
+                        entity_name = request_data.get('entity_name')
                         
                         # From source_file_id lookup
-                        if not drug_name and request_data.get('source_file_id'):
+                        if not entity_name and request_data.get('source_file_id'):
                             source_file = db.query(SourceFiles).filter(
                                 SourceFiles.id == request_data['source_file_id']
                             ).first()
                             if source_file:
-                                drug_name = source_file.drug_name
+                                entity_name = source_file.entity_name
                                 
-                        # From drug_id lookup
-                        if not drug_name and request_data.get('drug_id'):
-                            drug = db.query(FDAExtractionResults).filter(
-                                FDAExtractionResults.id == request_data['drug_id']
+                        # From entity_id lookup
+                        if not entity_name and request_data.get('entity_id'):
+                            entity = db.query(FDAExtractionResults).filter(
+                                FDAExtractionResults.id == request_data['entity_id']
                             ).first()
-                            if drug:
-                                drug_name = drug.drug_name
+                            if entity:
+                                entity_name = entity.entity_name
                 except:
                     pass
             
-            # Extract drug name from user query if not found
-            if not drug_name and chat.user_query:
+            # Extract entity name from user query if not found
+            if not entity_name and chat.user_query:
                 query_lower = chat.user_query.lower()
                 if "augtyro" in query_lower:
-                    drug_name = "AUGTYRO"
+                    entity_name = "AUGTYRO"
                 elif "krazati" in query_lower:
-                    drug_name = "KRAZATI"
+                    entity_name = "KRAZATI"
                 elif "jemperli" in query_lower:
-                    drug_name = "JEMPERLI"
+                    entity_name = "JEMPERLI"
                 elif "gavreto" in query_lower:
-                    drug_name = "GAVRETO"
+                    entity_name = "GAVRETO"
             
             activity = {
                 "id": f"chat_{chat.id}",
@@ -433,8 +433,8 @@ async def get_dashboard_stats(
                 "timestamp": chat.created_at.isoformat()
             }
             
-            if drug_name:
-                activity["drugName"] = drug_name
+            if entity_name:
+                activity["entityName"] = entity_name
                 
             recent_activities.append(activity)
         
@@ -456,23 +456,23 @@ async def get_dashboard_stats(
                 elif 'view' in search.search_type.lower():
                     activity_type = 'view'
             
-            # Extract drug name from filters if available
-            drug_name = None
+            # Extract entity name from filters if available
+            entity_name = None
             if search.filters_applied and isinstance(search.filters_applied, dict):
-                drug_name = search.filters_applied.get('drug_name')
+                entity_name = search.filters_applied.get('entity_name')
             
-            # If no drug name in filters, try to extract from query
-            if not drug_name and search.search_query:
-                # Clean up the query to extract drug name
+            # If no entity name in filters, try to extract from query
+            if not entity_name and search.search_query:
+                # Clean up the query to extract entity name
                 query_lower = search.search_query.lower()
                 if "augtyro" in query_lower:
-                    drug_name = "AUGTYRO"
+                    entity_name = "AUGTYRO"
                 elif "krazati" in query_lower:
-                    drug_name = "KRAZATI"
+                    entity_name = "KRAZATI"
                 elif "jemperli" in query_lower:
-                    drug_name = "JEMPERLI"
+                    entity_name = "JEMPERLI"
                 elif "gavreto" in query_lower:
-                    drug_name = "GAVRETO"
+                    entity_name = "GAVRETO"
             
             activity = {
                 "id": f"search_{search.id}",
@@ -483,7 +483,7 @@ async def get_dashboard_stats(
             if activity_type == 'search':
                 activity["query"] = search.search_query
             else:  # view
-                activity["drugName"] = drug_name or search.search_query
+                activity["entityName"] = entity_name or search.search_query
             
             recent_activities.append(activity)
         
@@ -498,23 +498,23 @@ async def get_dashboard_stats(
             
             activity_types = ['search', 'view', 'chat']
             for idx, sf in enumerate(source_files):
-                drug_name = sf.drug_name if sf.drug_name else sf.file_name.replace(".pdf", "").replace("_", " ").upper()
+                entity_name = sf.entity_name if sf.entity_name else sf.file_name.replace(".pdf", "").replace("_", " ").upper()
                 
-                # Clean up drug names
-                if "lbl" in drug_name.lower():
-                    drug_name = drug_name.split("LBL")[0].strip()
-                if "approved" in drug_name.lower():
-                    drug_name = drug_name.split("APPROVED")[0].strip()
+                # Clean up entity names
+                if "lbl" in entity_name.lower():
+                    entity_name = entity_name.split("LBL")[0].strip()
+                if "approved" in entity_name.lower():
+                    entity_name = entity_name.split("APPROVED")[0].strip()
                 
-                # Map known drug names
-                if "augtyro" in drug_name.lower():
-                    drug_name = "AUGTYRO"
-                elif "krazati" in drug_name.lower():
-                    drug_name = "KRAZATI"
-                elif "jemperli" in drug_name.lower():
-                    drug_name = "JEMPERLI"
-                elif "gavreto" in drug_name.lower():
-                    drug_name = "GAVRETO"
+                # Map known entity names
+                if "augtyro" in entity_name.lower():
+                    entity_name = "AUGTYRO"
+                elif "krazati" in entity_name.lower():
+                    entity_name = "KRAZATI"
+                elif "jemperli" in entity_name.lower():
+                    entity_name = "JEMPERLI"
+                elif "gavreto" in entity_name.lower():
+                    entity_name = "GAVRETO"
                 
                 activity_type = activity_types[idx % 3]
                 
@@ -525,22 +525,22 @@ async def get_dashboard_stats(
                 }
                 
                 if activity_type == 'search':
-                    activity["query"] = f"{drug_name} side effects"
+                    activity["query"] = f"{entity_name} side effects"
                 elif activity_type == 'chat':
-                    activity["query"] = f"What are the indications for {drug_name}?"
+                    activity["query"] = f"What are the indications for {entity_name}?"
                 else:  # view
-                    activity["drugName"] = drug_name
+                    activity["entityName"] = entity_name
                 
                 recent_activities.append(activity)
         
         # Build response in the expected format
         return {
-            "total_drugs": total_drugs,
+            "total_entities": total_entities,
             "total_manufacturers": manufacturers_count,
             "recent_approvals": recent_approvals,
             "total_searches": total_searches,
             "additional_stats": {
-                "trending_drugs": trending_drugs[:5],  # Top 5 trending drugs
+                "trending_entities": trending_entities[:5],  # Top 5 trending entities
                 "recent_activity": recent_activities[:10]  # Last 10 activities
             }
         }
@@ -558,8 +558,8 @@ async def list_available_documents(
         # Get all source files
         source_files = db.query(SourceFiles).all()
         
-        # Get all drugs
-        drugs = db.query(FDAExtractionResults).all()
+        # Get all entities
+        entities = db.query(FDAExtractionResults).all()
         
         return {
             "source_files": [
@@ -572,17 +572,17 @@ async def list_available_documents(
                 }
                 for sf in source_files
             ],
-            "drugs": [
+            "entities": [
                 {
-                    "id": drug.id,
-                    "drug_name": drug.drug_name,
-                    "source_file_id": drug.source_file_id,
-                    "file_name": drug.file_name
+                    "id": entity.id,
+                    "entity_name": entity.entity_name,
+                    "source_file_id": entity.source_file_id,
+                    "file_name": entity.file_name
                 }
-                for drug in drugs
+                for entity in entities
             ],
             "total_source_files": len(source_files),
-            "total_drugs": len(drugs)
+            "total_entities": len(entities)
         }
     except Exception as e:
         logger.error(f"Error listing documents: {e}")
@@ -595,7 +595,7 @@ async def get_trending_searches(
     limit: int = Query(10, le=50),
     db: Session = Depends(get_db)
 ):
-    """Get trending drug searches for the specified period."""
+    """Get trending entity searches for the specified period."""
     try:
         from datetime import datetime, timedelta
         
@@ -608,69 +608,69 @@ async def get_trending_searches(
         else:  # weekly
             start_date = end_date - timedelta(days=7)
         
-        # Get trending drugs from recent searches
+        # Get trending entities from recent searches
         # Since we don't have a populated SearchHistory table, we'll use SourceFiles data
         trending = []
         
-        # Get all drugs from SourceFiles
+        # Get all entities from SourceFiles
         source_files = db.query(SourceFiles).filter(
             SourceFiles.status.in_(["READY", "ready", "Completed"])
         ).limit(limit).all()
         
         for idx, sf in enumerate(source_files):
-            # Extract drug name from filename
-            drug_name = sf.file_name.replace(".pdf", "").replace("_", " ").upper()
+            # Extract entity name from filename
+            entity_name = sf.file_name.replace(".pdf", "").replace("_", " ").upper()
             
             # Clean up common patterns
-            if "lbl" in drug_name.lower():
-                drug_name = drug_name.split("LBL")[0].strip()
-            if "approved" in drug_name.lower():
-                drug_name = drug_name.split("APPROVED")[0].strip()
-            if "original" in drug_name.lower():
-                drug_name = drug_name.split("ORIGINAL")[0].strip()
-            if "efficacy" in drug_name.lower():
-                drug_name = drug_name.split("EFFICACY")[0].strip()
+            if "lbl" in entity_name.lower():
+                entity_name = entity_name.split("LBL")[0].strip()
+            if "approved" in entity_name.lower():
+                entity_name = entity_name.split("APPROVED")[0].strip()
+            if "original" in entity_name.lower():
+                entity_name = entity_name.split("ORIGINAL")[0].strip()
+            if "efficacy" in entity_name.lower():
+                entity_name = entity_name.split("EFFICACY")[0].strip()
                 
-            # Map known drug names
-            if "augtyro" in drug_name.lower():
-                drug_name = "AUGTYRO"
+            # Map known entity names
+            if "augtyro" in entity_name.lower():
+                entity_name = "AUGTYRO"
                 manufacturer = "Turning Point Therapeutics"
                 indication = "Treatment of ROS1-positive solid tumors"
-            elif "krazati" in drug_name.lower():
-                drug_name = "KRAZATI"
+            elif "krazati" in entity_name.lower():
+                entity_name = "KRAZATI"
                 manufacturer = "Mirati Therapeutics"
                 indication = "Treatment of KRAS G12C-mutated non-small cell lung cancer"
-            elif "jemperli" in drug_name.lower():
-                drug_name = "JEMPERLI"
+            elif "jemperli" in entity_name.lower():
+                entity_name = "JEMPERLI"
                 manufacturer = "GlaxoSmithKline"
                 indication = "Treatment of mismatch repair deficient recurrent or advanced endometrial cancer"
-            elif "gavreto" in drug_name.lower():
-                drug_name = "GAVRETO"
+            elif "gavreto" in entity_name.lower():
+                entity_name = "GAVRETO"
                 manufacturer = "Roche"
                 indication = "Treatment of RET fusion-positive non-small cell lung cancer"
             else:
                 manufacturer = "Pharmaceutical Company"
                 indication = "FDA Approved Treatment"
             
-            # Check if we have actual drug data
-            drug_data = db.query(FDAExtractionResults).filter(
+            # Check if we have actual entity data
+            entitie_data = db.query(FDAExtractionResults).filter(
                 FDAExtractionResults.source_file_id == sf.id
             ).first()
             
-            if drug_data:
-                drug_name = drug_data.drug_name or drug_name
-                manufacturer = drug_data.manufacturer or manufacturer
-                # Get indication from drug sections since therapeutic_area doesn't exist
-                drug_section = db.query(DrugSections).filter(
-                    DrugSections.source_file_id == sf.id,
-                    DrugSections.section_type.in_(['indication', 'indications'])
+            if entitie_data:
+                entity_name = entitie_data.entity_name or entity_name
+                manufacturer = entitie_data.manufacturer or manufacturer
+                # Get indication from entity sections since therapeutic_area doesn't exist
+                entitie_section = db.query(EntitySections).filter(
+                    EntitySections.source_file_id == sf.id,
+                    EntitySections.section_type.in_(['indication', 'indications'])
                 ).first()
-                if drug_section and drug_section.section_content:
-                    indication = drug_section.section_content[:200] + "..." if len(drug_section.section_content) > 200 else drug_section.section_content
+                if entitie_section and entitie_section.section_content:
+                    indication = entitie_section.section_content[:200] + "..." if len(entitie_section.section_content) > 200 else entitie_section.section_content
             
             trending.append({
                 "id": str(sf.id),
-                "drug_name": drug_name,
+                "entity_name": entity_name,
                 "manufacturer": manufacturer,
                 "indication": indication,
                 "therapeutic_area": indication,
@@ -705,15 +705,15 @@ async def get_user_search_history(
         if search_records:
             # We have actual search history
             for record in search_records:
-                # Extract drug name from filters if available
-                drug_name = None
+                # Extract entity name from filters if available
+                entity_name = None
                 if record.filters_applied and isinstance(record.filters_applied, dict):
-                    drug_name = record.filters_applied.get('drug_name')
+                    entity_name = record.filters_applied.get('entity_name')
                 
                 history.append({
                     "id": str(record.id),
                     "action_type": "search",
-                    "drug_name": drug_name,
+                    "entity_name": entity_name,
                     "search_query": record.search_query,
                     "search_type": record.search_type,
                     "results_count": record.results_count,
@@ -733,7 +733,7 @@ async def get_user_search_history(
                     history.append({
                         "id": str(record.id),
                         "action_type": "chat",
-                        "drug_name": None,
+                        "entity_name": None,
                         "search_query": record.user_query,
                         "search_type": "chat",
                         "results_count": 1,
@@ -749,26 +749,26 @@ async def get_user_search_history(
                 ).order_by(SourceFiles.created_at.desc()).limit(limit).all()
                 
                 for idx, sf in enumerate(source_files):
-                    # Extract drug name
-                    drug_name = sf.drug_name or sf.file_name.replace(".pdf", "").replace("_", " ").upper()
+                    # Extract entity name
+                    entity_name = sf.entity_name or sf.file_name.replace(".pdf", "").replace("_", " ").upper()
                     
                     # Clean up
-                    if "lbl" in drug_name.lower():
-                        drug_name = drug_name.split("LBL")[0].strip()
-                    if "approved" in drug_name.lower():
-                        drug_name = drug_name.split("APPROVED")[0].strip()
+                    if "lbl" in entity_name.lower():
+                        entity_name = entity_name.split("LBL")[0].strip()
+                    if "approved" in entity_name.lower():
+                        entity_name = entity_name.split("APPROVED")[0].strip()
                     
                     history.append({
                         "id": str(sf.id),
                         "action_type": "view",
-                        "drug_name": drug_name,
-                        "search_query": f"Viewed {drug_name}",
+                        "entity_name": entity_name,
+                        "search_query": f"Viewed {entity_name}",
                         "search_type": "file_view",
                         "results_count": 1,
                         "timestamp": sf.created_at.isoformat() if sf.created_at else None,
                         "created_at": sf.created_at.isoformat() if sf.created_at else None,
-                        "user_query": f"Viewed {drug_name}",
-                        "query": drug_name
+                        "user_query": f"Viewed {entity_name}",
+                        "query": entity_name
                     })
         
         return {"history": history[:limit]}
