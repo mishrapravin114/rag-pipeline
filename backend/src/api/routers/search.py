@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/search", tags=["search"])
 # Pydantic models for request/response
 class SearchRequest(BaseModel):
     query: str
-    drug_name: Optional[str] = None
+    entity_name: Optional[str] = None
 
 
 @router.post("")
@@ -20,13 +20,13 @@ async def search_documents(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Search FDA documents by drug name with SQL first, then vector search fallback."""
+    """Search FDA documents by entity name with SQL first, then vector search fallback."""
     try:
         # Perform search with user_id for history tracking
         result = await FDAChatManagementService.search_fda_documents(
             search_query=request.query,
             user_id=current_user.id,
-            drug_name=request.drug_name,
+            entity_name=request.entity_name,
             db=db
         )
         
@@ -34,17 +34,17 @@ async def search_documents(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/drug-names")
-async def get_unique_drug_names(
+@router.get("/entity-names")
+async def get_unique_entitie_names(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all unique drug names from SourceFiles for filter dropdown."""
+    """Get all unique entity names from SourceFiles for filter dropdown."""
     try:
-        drug_names = FDAChatManagementService.get_unique_drug_names(db)
+        entity_names = FDAChatManagementService.get_unique_entitie_names(db)
         return {
             "success": True,
-            "drug_names": drug_names
+            "entity_names": entity_names
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
