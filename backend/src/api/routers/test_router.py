@@ -1,8 +1,8 @@
-"""Test router for debugging drug details functionality."""
+"""Test router for debugging entity details functionality."""
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database.database import get_db_session, FDAExtractionResults, DrugSections, SourceFiles
+from database.database import get_db_session, FDAExtractionResults, EntitySections, SourceFiles
 
 router = APIRouter(prefix="/api/test", tags=["test"])
 
@@ -14,28 +14,28 @@ def get_db():
     finally:
         db.close()
 
-@router.get("/drug/{drug_id}")
-async def test_drug_details(drug_id: int, db: Session = Depends(get_db)):
-    """Simple test for drug details."""
+@router.get("/entity/{entity_id}")
+async def test_entitie_details(entity_id: int, db: Session = Depends(get_db)):
+    """Simple test for entity details."""
     try:
-        # Get basic drug info
-        drug = db.query(FDAExtractionResults).filter(
-            FDAExtractionResults.id == drug_id
+        # Get basic entity info
+        entity = db.query(FDAExtractionResults).filter(
+            FDAExtractionResults.id == entity_id
         ).first()
         
-        if not drug:
-            raise HTTPException(status_code=404, detail="Drug not found")
+        if not entity:
+            raise HTTPException(status_code=404, detail="Entity not found")
         
         # Get sections
-        sections = db.query(DrugSections).filter(
-            DrugSections.source_file_id == drug.source_file_id
+        sections = db.query(EntitySections).filter(
+            EntitySections.source_file_id == entity.source_file_id
         ).all()
         
         return {
-            "drug_id": drug.id,
-            "drug_name": drug.drug_name,
-            "source_file_id": drug.source_file_id,
-            "manufacturer": drug.manufacturer,
+            "entity_id": entity.id,
+            "entity_name": entity.entity_name,
+            "source_file_id": entity.source_file_id,
+            "manufacturer": entity.manufacturer,
             "sections_count": len(sections),
             "sections": [
                 {
