@@ -11,7 +11,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
-from database.database import database_session, FDAExtractionResults, SourceFiles, DrugSections
+from database.database import database_session, FDAExtractionResults, SourceFiles, EntitySections
 
 logger = logging.getLogger(__name__)
 
@@ -48,14 +48,14 @@ class EnhancedSearchService:
         # Brand name search
         if brand_name:
             filter_conditions.append(
-                FDAExtractionResults.drug_name.ilike(f"%{brand_name}%")
+                FDAExtractionResults.entity_name.ilike(f"%{brand_name}%")
             )
         
-        # Therapeutic area search (use DrugSections for indication)
+        # Therapeutic area search (use EntitySections for indication)
         if therapeutic_area:
-            drug_ids = [s.source_file_id for s in db.query(DrugSections).filter(DrugSections.section_type == "indication", DrugSections.section_content.ilike(f"%{therapeutic_area}%")).all()]
-            if drug_ids:
-                filter_conditions.append(FDAExtractionResults.source_file_id.in_(drug_ids))
+            entity_ids = [s.source_file_id for s in db.query(EntitySections).filter(EntitySections.section_type == "indication", EntitySections.section_content.ilike(f"%{therapeutic_area}%")).all()]
+            if entity_ids:
+                filter_conditions.append(FDAExtractionResults.source_file_id.in_(entity_ids))
         
         # Apply additional filters
         if filters:
@@ -86,12 +86,12 @@ class EnhancedSearchService:
         # Format results
         formatted_results = []
         for result in results:
-            # Get indication from DrugSections
-            indication_section = db.query(DrugSections).filter(DrugSections.source_file_id == result.source_file_id, DrugSections.section_type == "indication").first()
+            # Get indication from EntitySections
+            indication_section = db.query(EntitySections).filter(EntitySections.source_file_id == result.source_file_id, EntitySections.section_type == "indication").first()
             formatted_results.append({
                 "id": result.id,
                 "source_file_id": result.source_file_id,
-                "drug_name": result.drug_name or "Unknown",
+                "entity_name": result.entity_name or "Unknown",
                 "therapeutic_area": indication_section.section_content if indication_section else "Not specified",
                 "manufacturer": result.manufacturer or "Unknown",
                 "approval_status": "Approved",  # Default since field doesn't exist
@@ -119,15 +119,15 @@ class EnhancedSearchService:
     def get_search_suggestions(query: str, search_type: str, db: Session) -> List[str]:
         """Get search suggestions for autocomplete."""
         if search_type == "brand":
-            results = db.query(distinct(FDAExtractionResults.drug_name)).filter(
-                FDAExtractionResults.drug_name.ilike(f"%{query}%")
+            results = db.query(distinct(FDAExtractionResults.entity_name)).filter(
+                FDAExtractionResults.entity_name.ilike(f"%{query}%")
             ).limit(10).all()
         elif search_type == "therapeutic":
-            # Get therapeutic suggestions from DrugSections indication content
-            from database.database import DrugSections
-            results = db.query(distinct(DrugSections.section_content)).filter(
-                DrugSections.section_type == "indication",
-                DrugSections.section_content.ilike(f"%{query}%")
+            # Get therapeutic suggestions from EntitySections indication content
+            from database.database import EntitySections
+            results = db.query(distinct(EntitySections.section_content)).filter(
+                EntitySections.section_type == "indication",
+                EntitySections.section_content.ilike(f"%{query}%")
             ).limit(10).all()
         else:
             return []

@@ -18,7 +18,7 @@ from google.cloud import pubsub_v1
 
 from database.database import (
     Collection, SourceFiles, IndexingJob, collection_document_association,
-    DrugSections, DocumentData
+    EntitySections, DocumentData
 )
 from utils.qdrant_util import QdrantUtil
 from api.services.websocket_manager import get_connection_manager

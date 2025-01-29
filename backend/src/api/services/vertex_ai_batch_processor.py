@@ -211,7 +211,7 @@ class VertexAIBatchProcessor:
                                 metadata['collection_id'] = job.collection_id
                                 metadata['source_file_id'] = doc.id
                                 metadata['file_name'] = doc.file_name
-                                metadata['drug_name'] = doc.drug_name
+                                metadata['entity_name'] = doc.entity_name
                                 new_metadatas.append(metadata)
                             
                             # Add to target collection
