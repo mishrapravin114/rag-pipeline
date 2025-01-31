@@ -4,7 +4,7 @@ export async function GET() {
   try {
     // Mock data for now - in production this would connect to the backend
     const stats = {
-      totalDrugs: 4,
+      totalEntitys: 4,
       totalManufacturers: 3,
       recentApprovals: 1,
       totalSections: 24,

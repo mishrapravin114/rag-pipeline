@@ -8,7 +8,7 @@ export default function ChatLoading() {
           <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Chat</h3>
-        <p className="text-gray-600">Preparing your FDA drug information assistant...</p>
+        <p className="text-gray-600">Preparing your FDA entity information assistant...</p>
       </div>
     </div>
   );

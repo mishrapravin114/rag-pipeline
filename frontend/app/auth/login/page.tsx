@@ -90,7 +90,7 @@ function LoginForm() {
             <Shield className="h-6 w-6 text-white" />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-blue-900">
-            Sign in to RXInsightX
+            Sign in to Raglior
           </h2>
           <p className="mt-2 text-sm text-blue-700">
             Access the pharmaceutical document intelligence platform
