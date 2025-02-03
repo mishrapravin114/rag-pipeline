@@ -68,7 +68,7 @@ interface SearchResult {
   source_file_id: number;
   file_name: string;
   file_url: string;
-  drug_name: string | null;
+  entity_name: string | null;
   us_ma_date?: string;
   relevance_score: number;
   relevance_comments: string;
@@ -76,7 +76,7 @@ interface SearchResult {
   search_type?: string;
 }
 
-interface Drug {
+interface Entity {
   id: string;
   name: string;
   manufacturer: string;
@@ -94,7 +94,7 @@ interface Collection {
 }
 
 interface DashboardStats {
-  totalDrugs: number;
+  totalEntities: number;
   totalManufacturers: number;
   recentApprovals: number;
   totalSearches: number;
@@ -103,8 +103,8 @@ interface DashboardStats {
     processedFiles: number;
     totalMetadataEntries: number;
     recentSearches7d: number;
-    trendingDrugs: Array<{ drug_name: string; search_count: number }>;
-    topDrugs: Array<{ name: string; count: number }>;
+    trendingEntitys: Array<{ entity_name: string; search_count: number }>;
+    topEntitys: Array<{ name: string; count: number }>;
     topManufacturers: Array<{ name: string; count: number }>;
   };
   lastUpdated?: string;
@@ -130,20 +130,20 @@ export default function DashboardPage() {
     has_previous: boolean;
   } | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
-    totalDrugs: 0,
+    totalEntitys: 0,
     totalManufacturers: 0,
     recentApprovals: 0,
     totalSearches: 0
   });
-  const [trendingDrugs, setTrendingDrugs] = useState<Drug[]>([]);
+  const [trendingEntitys, setTrendingEntities] = useState<Entity[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [loadingStats, setLoadingStats] = useState(true);
-  const [drugNames, setDrugNames] = useState<string[]>([]);
-  const [selectedDrugFilter, setSelectedDrugFilter] = useState<string | null>(null);
-  const [showDrugFilter, setShowDrugFilter] = useState(false);
+  const [entityNames, setEntityNames] = useState<string[]>([]);
+  const [selectedEntityFilter, setSelectedEntityFilter] = useState<string | null>(null);
+  const [showEntityFilter, setShowEntityFilter] = useState(false);
   const [searchType, setSearchType] = useState<string>('');
   const [totalResults, setTotalResults] = useState(0);
-  const [loadingDrugNames, setLoadingDrugNames] = useState(false);
+  const [loadingEntityNames, setLoadingEntityNames] = useState(false);
   const [showRelevanceDialog, setShowRelevanceDialog] = useState(false);
   const [selectedResult, setSelectedResult] = useState<SearchResult | null>(null);
   const [selectedDocuments, setSelectedDocuments] = useState<Set<number>>(new Set());
@@ -154,8 +154,8 @@ export default function DashboardPage() {
   const [selectedChatFiles, setSelectedChatFiles] = useState<{ 
     ids: number[]; 
     names: string[]; 
-    drugDocuments?: Array<{
-      drugName: string;
+    entitieDocuments?: Array<{
+      entityName: string;
       documents: Array<{
         id: number;
         fileName: string;
@@ -182,7 +182,7 @@ export default function DashboardPage() {
   useEffect(() => {
     console.log('🚀 Dashboard mounted, loading data...');
     loadDashboardData();
-    loadDrugNames(); // Load all drug names initially
+    loadEntityNames(); // Load all entity names initially
     loadCollections();
     refreshActivities(); // Load recent activities with docXChat=true filter
     loadHistory(); // Load chat history with docXChat filter
@@ -198,7 +198,7 @@ export default function DashboardPage() {
         setSearchQuery(returnQuery);
       }
       if (returnFilter) {
-        setSelectedDrugFilter(returnFilter);
+        setSelectedEntityFilter(returnFilter);
       }
       
       // Check for collection filter from URL
@@ -228,16 +228,16 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // Reload drug names when collection changes
+  // Reload entity names when collection changes
   useEffect(() => {
     if (selectedCollection !== null) {
-      // Clear existing drug filter when collection changes
-      setSelectedDrugFilter(null);
-      // Load drug names for the selected collection
-      loadDrugNames(selectedCollection);
+      // Clear existing entity filter when collection changes
+      setSelectedEntityFilter(null);
+      // Load entity names for the selected collection
+      loadEntityNames(selectedCollection);
     } else {
-      // Load all drug names when no collection is selected
-      loadDrugNames();
+      // Load all entity names when no collection is selected
+      loadEntityNames();
     }
   }, [selectedCollection]);
 
@@ -246,7 +246,7 @@ export default function DashboardPage() {
     try {
       const data = await apiService.getDashboardData();
       setDashboardStats({
-        totalDrugs: data.total_drugs,
+        totalEntities: data.total_entities,
         totalManufacturers: data.total_manufacturers,
         recentApprovals: data.recent_approvals || 0,
         totalSearches: data.total_searches || (data.additional_stats?.recent_searches_7d || 0),
@@ -255,32 +255,32 @@ export default function DashboardPage() {
           processedFiles: data.additional_stats.processed_files,
           totalMetadataEntries: data.additional_stats.total_metadata_entries,
           recentSearches7d: data.additional_stats.recent_searches_7d,
-          trendingDrugs: data.additional_stats.trending_drugs,
-          topDrugs: data.additional_stats.top_drugs,
+          trendingEntitys: data.additional_stats.trending_entities,
+          topEntitys: data.additional_stats.top_entities,
           topManufacturers: data.additional_stats.top_manufacturers
         } : undefined,
         lastUpdated: data.last_updated
       });
       
-      // Process trending drugs directly from the response data
-      if (data.additional_stats?.trending_drugs && data.additional_stats.trending_drugs.length > 0) {
-        console.log('Processing trending drugs from dashboard data:', data.additional_stats.trending_drugs);
-        const trendingData = data.additional_stats.trending_drugs.map((drug: any, index: number) => ({
+      // Process trending entities directly from the response data
+      if (data.additional_stats?.trending_entities && data.additional_stats.trending_entities.length > 0) {
+        console.log('Processing trending entities from dashboard data:', data.additional_stats.trending_entities);
+        const trendingData = data.additional_stats.trending_entities.map((entity: any, index: number) => ({
           id: `trending-${index}`,
-          name: drug.drug_name.toUpperCase(), // Capitalize drug names
+          name: entity.entity_name.toUpperCase(), // Capitalize entity names
           manufacturer: 'View Details',
           therapeuticArea: 'Multiple',
           approvalDate: '',
           status: 'Trending',
-          indication: `${drug.search_count} searches`
+          indication: `${entity.search_count} searches`
         }));
-        setTrendingDrugs(trendingData.slice(0, 3));
+        setTrendingEntities(trendingData.slice(0, 3));
       }
     } catch (error) {
       console.error('Failed to load dashboard stats:', error);
       // Set some fallback values
       setDashboardStats({
-        totalDrugs: 0,
+        totalEntities: 0,
         totalManufacturers: 0,
         recentApprovals: 0,
         totalSearches: 0
@@ -290,27 +290,27 @@ export default function DashboardPage() {
     }
   };
 
-  // Remove loadTrendingDrugs as trending drugs are now loaded directly in loadDashboardData
+  // Remove loadTrendingEntities as trending entities are now loaded directly in loadDashboardData
 
   // No longer needed - using useActivityTracker hook
   
   // No longer needed - using useActivityTracker hook
 
-  const loadDrugNames = async (collectionId?: number | null) => {
+  const loadEntityNames = async (collectionId?: number | null) => {
     try {
-      setLoadingDrugNames(true);
-      console.log('Loading drug names...', collectionId ? `for collection ${collectionId}` : 'for all collections');
-      const response = await apiService.getUniqueDrugNames(collectionId || undefined);
-      console.log('Drug names response:', response);
+      setLoadingEntityNames(true);
+      console.log('Loading entity names...', collectionId ? `for collection ${collectionId}` : 'for all collections');
+      const response = await apiService.getUniqueEntityNames(collectionId || undefined);
+      console.log('Entity names response:', response);
       if (response.success) {
-        setDrugNames(response.drug_names);
-        console.log('Drug names loaded:', response.drug_names.length);
+        setEntityNames(response.entity_names);
+        console.log('Entity names loaded:', response.entity_names.length);
       }
     } catch (error) {
-      console.error('Failed to load drug names:', error);
-      toast.error('Failed to load drug filter options');
+      console.error('Failed to load entity names:', error);
+      toast.error('Failed to load entity filter options');
     } finally {
-      setLoadingDrugNames(false);
+      setLoadingEntityNames(false);
     }
   };
   
@@ -328,7 +328,7 @@ export default function DashboardPage() {
 
   const handleSearch = async (queryOverride?: string, filterOverride?: string | null, page: number = 1) => {
     const query = queryOverride !== undefined ? queryOverride : searchQuery;
-    const filter = filterOverride !== undefined ? filterOverride : selectedDrugFilter;
+    const filter = filterOverride !== undefined ? filterOverride : selectedEntityFilter;
     
     // Ensure query is a string
     const queryString = String(query || '');
@@ -348,25 +348,25 @@ export default function DashboardPage() {
     let resultsCount = 0;
     
     try {
-      // Use empty string if no query but drug filter is selected
+      // Use empty string if no query but entity filter is selected
       const searchQueryString = queryString.trim() || '';
       
-      // If we have a search query and a drug filter, we need to get the source_file_id
+      // If we have a search query and a entity filter, we need to get the source_file_id
       let sourceFileId: number | undefined;
       if (searchQueryString && filter && selectedCollection) {
-        // Find the source_file_id for the selected drug in the collection
+        // Find the source_file_id for the selected entity in the collection
         try {
           const collectionDetails = await apiService.getCollectionDetails(selectedCollection);
           if (collectionDetails.documents) {
-            const drugFile = collectionDetails.documents.find(
-              (doc: any) => doc.drug_name === filter && doc.status === 'READY'
+            const entitieFile = collectionDetails.documents.find(
+              (doc: any) => doc.entity_name === filter && doc.status === 'READY'
             );
-            if (drugFile) {
-              sourceFileId = drugFile.id;
+            if (entitieFile) {
+              sourceFileId = entitieFile.id;
             }
           }
         } catch (error) {
-          console.error('Failed to get source file ID for drug:', error);
+          console.error('Failed to get source file ID for entity:', error);
         }
       }
       
@@ -411,7 +411,7 @@ export default function DashboardPage() {
       // Track search activity
       trackSearch(
         searchQuery.trim() || 'all results',
-        selectedDrugFilter || undefined,
+        selectedEntityFilter || undefined,
         resultsCount
       );
     }
@@ -420,20 +420,20 @@ export default function DashboardPage() {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       setCurrentPage(1); // Reset to first page
-      handleSearch(searchQuery, selectedDrugFilter, 1);
+      handleSearch(searchQuery, selectedEntityFilter, 1);
     }
   };
 
-  const handleDrugFilterSelect = (drugName: string | null) => {
-    setSelectedDrugFilter(drugName);
-    setShowDrugFilter(false);
+  const handleEntityFilterSelect = (entityName: string | null) => {
+    setSelectedEntityFilter(entityName);
+    setShowEntityFilter(false);
     setCurrentPage(1); // Reset to first page
     // Immediately trigger a search with the new filter
-    handleSearch(searchQuery, drugName, 1);
+    handleSearch(searchQuery, entityName, 1);
   };
 
-  const clearDrugFilter = () => {
-    setSelectedDrugFilter(null);
+  const clearEntityFilter = () => {
+    setSelectedEntityFilter(null);
   };
 
   const openFileUrl = (url: string) => {
@@ -470,7 +470,7 @@ export default function DashboardPage() {
       
       setSelectedChatFiles({
         ids: Array.from(selectedDocuments),
-        names: selectedResults.map(r => r.drug_name || r.file_name.split('_')[0] || 'document'),
+        names: selectedResults.map(r => r.entity_name || r.file_name.split('_')[0] || 'document'),
         isCollectionChat: false,
         collectionId: selectedCollection || -1  // Use -1 when no collection is selected
       });
@@ -491,8 +491,8 @@ export default function DashboardPage() {
         <div className="mb-8">
           <div className="mb-8">
             <div className="text-center mb-8">
-              <h1 className="text-4xl lg:text-5xl font-bold page-title mb-2 leading-tight">DocXAI Intelligence Platform</h1>
-              <h2 className="text-2xl font-semibold text-blue-500 mb-4">Advanced DocXAI Discovery & Analysis</h2>              
+              <h1 className="text-4xl lg:text-5xl font-bold page-title mb-2 leading-tight">DocuGenius Intelligence Platform</h1>
+              <h2 className="text-2xl font-semibold text-blue-500 mb-4">Advanced Document Discovery & Analysis</h2>              
             </div>
           </div>
         </div>
@@ -518,7 +518,7 @@ export default function DashboardPage() {
                       className="pl-10 pr-4 py-3 text-base"
                     />
                   </div>
-                  <p className="mt-1 text-sm text-gray-500">Leave empty to search by collection or drug only.</p>
+                  <p className="mt-1 text-sm text-gray-500">Leave empty to search by collection or entity only.</p>
                 </div>
                 
                 {/* Filters Row */}
@@ -557,18 +557,18 @@ export default function DashboardPage() {
                     </Select>
                   </div>
                   
-                  {/* Drug Filter */}
+                  {/* Entity Filter */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Drug Filter</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Entity Filter</label>
                     <Select
-                      value={selectedDrugFilter || 'all'}
-                      onValueChange={(value) => setSelectedDrugFilter(value === 'all' ? null : value)}
+                      value={selectedEntityFilter || 'all'}
+                      onValueChange={(value) => setSelectedEntityFilter(value === 'all' ? null : value)}
                     >
                       <SelectTrigger className="w-full h-[46px]">
-                        <SelectValue placeholder="All Drugs">
+                        <SelectValue placeholder="All Entities">
                           <div className="flex items-center gap-2">
                             <Pill className="h-4 w-4" />
-                            {selectedDrugFilter || 'All Drugs'}
+                            {selectedEntityFilter || 'All Entities'}
                           </div>
                         </SelectValue>
                       </SelectTrigger>
@@ -576,20 +576,20 @@ export default function DashboardPage() {
                         <SelectItem value="all">
                           <div className="flex items-center gap-2">
                             <Pill className="h-4 w-4" />
-                            All Drugs
+                            All Entities
                           </div>
                         </SelectItem>
-                        {loadingDrugNames ? (
+                        {loadingEntityNames ? (
                           <div className="px-2 py-4 text-center text-sm text-gray-500">
                             <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                            Loading drugs...
+                            Loading entities...
                           </div>
                         ) : (
-                          drugNames.map((drugName) => (
-                            <SelectItem key={drugName} value={drugName}>
+                          entityNames.map((entityName) => (
+                            <SelectItem key={entityName} value={entityName}>
                               <div className="flex items-center gap-2">
                                 <Pill className="h-3 w-3" />
-                                {drugName}
+                                {entityName}
                               </div>
                             </SelectItem>
                           ))
@@ -602,7 +602,7 @@ export default function DashboardPage() {
                 {/* Search Button and Actions */}
                 <div className="flex items-center justify-between pt-4">
                   <div className="text-sm text-gray-600">
-                    {(selectedCollection || selectedDrugFilter || searchQuery) && (
+                    {(selectedCollection || selectedEntityFilter || searchQuery) && (
                       <div className="flex items-center gap-2">
                         <span>Active filters:</span>
                         {searchQuery && (
@@ -615,9 +615,9 @@ export default function DashboardPage() {
                             Collection: {collections.find(c => c.id === selectedCollection)?.name}
                           </Badge>
                         )}
-                        {selectedDrugFilter && (
+                        {selectedEntityFilter && (
                           <Badge variant="secondary" className="text-xs">
-                            Drug: {selectedDrugFilter}
+                            Entity: {selectedEntityFilter}
                           </Badge>
                         )}
                         <Button
@@ -626,7 +626,7 @@ export default function DashboardPage() {
                           onClick={() => {
                             setSearchQuery('');
                             setSelectedCollection(null);
-                            setSelectedDrugFilter(null);
+                            setSelectedEntityFilter(null);
                             setCurrentPage(1);
                             setPagination(null);
                             setSearchResults([]);
@@ -644,7 +644,7 @@ export default function DashboardPage() {
                     className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={() => {
                       setCurrentPage(1); // Reset to first page
-                      handleSearch(searchQuery, selectedDrugFilter, 1);
+                      handleSearch(searchQuery, selectedEntityFilter, 1);
                     }}
                     disabled={isSearching || !selectedCollection}
                     title={!selectedCollection ? "Please select a collection to search" : ""}
@@ -674,11 +674,11 @@ export default function DashboardPage() {
                       {searchQuery.trim() ? (
                         <>
                           Search Results for "{searchQuery}"
-                          {(selectedDrugFilter || selectedCollection) && (
+                          {(selectedEntityFilter || selectedCollection) && (
                             <span className="text-sm font-normal">
                               (filtered by{' '}
-                              {selectedDrugFilter && `drug: ${selectedDrugFilter}`}
-                              {selectedDrugFilter && selectedCollection && ', '}
+                              {selectedEntityFilter && `entity: ${selectedEntityFilter}`}
+                              {selectedEntityFilter && selectedCollection && ', '}
                               {selectedCollection && `collection: ${collections.find(c => c.id === selectedCollection)?.name}`}
                               )
                             </span>
@@ -687,11 +687,11 @@ export default function DashboardPage() {
                       ) : (
                         <>
                           All Results
-                          {(selectedDrugFilter || selectedCollection) && (
+                          {(selectedEntityFilter || selectedCollection) && (
                             <span className="text-sm font-normal">
                               {' '}for{' '}
-                              {selectedDrugFilter && `${selectedDrugFilter}`}
-                              {selectedDrugFilter && selectedCollection && ' in '}
+                              {selectedEntityFilter && `${selectedEntityFilter}`}
+                              {selectedEntityFilter && selectedCollection && ' in '}
                               {selectedCollection && `${collections.find(c => c.id === selectedCollection)?.name}`}
                             </span>
                           )}
@@ -765,30 +765,30 @@ export default function DashboardPage() {
                                 console.log('Ready documents:', readyDocs);
                                 console.log('Ready doc IDs:', readyDocs.map((doc: any) => doc.id));
                                 
-                                // Create drug documents grouped by drug name
-                                const drugDocMap = new Map();
+                                // Create entity documents grouped by entity name
+                                const entitieDocMap = new Map();
                                 collectionDocs.forEach((doc: any) => {
-                                  const drugName = doc.drug_name || doc.file_name;
-                                  if (!drugDocMap.has(drugName)) {
-                                    drugDocMap.set(drugName, {
-                                      drugName,
+                                  const entityName = doc.entity_name || doc.file_name;
+                                  if (!entitieDocMap.has(entityName)) {
+                                    entitieDocMap.set(entityName, {
+                                      entityName,
                                       documents: []
                                     });
                                   }
-                                  drugDocMap.get(drugName).documents.push({
+                                  entitieDocMap.get(entityName).documents.push({
                                     id: doc.id,
                                     fileName: doc.file_name
                                   });
                                 });
                                 
-                                const drugDocuments = Array.from(drugDocMap.values())
-                                  .sort((a, b) => a.drugName.localeCompare(b.drugName));
+                                const entitieDocuments = Array.from(entitieDocMap.values())
+                                  .sort((a, b) => a.entityName.localeCompare(b.entityName));
                                 
                                 // For collection chat, don't pass document IDs
                                 setSelectedChatFiles({
                                   ids: [],  // Pass empty array for collection-wide chat
-                                  names: collectionDocs.map((doc: any) => doc.drug_name || doc.file_name),
-                                  drugDocuments,  // Pass the grouped drug documents
+                                  names: collectionDocs.map((doc: any) => doc.entity_name || doc.file_name),
+                                  entitieDocuments,  // Pass the grouped entity documents
                                   isCollectionChat: true,
                                   collectionId: selectedCollection,
                                   isDashboardCollectionChat: true  // Flag to indicate this is from dashboard
@@ -826,34 +826,34 @@ export default function DashboardPage() {
                 ) : searchResults.length > 0 ? (
                   <div className="space-y-6">
                     {(() => {
-                      // Group results by drug name
+                      // Group results by entity name
                       const groupedResults = searchResults.reduce((acc, result) => {
-                        const drugName = result.drug_name;
-                        if (!acc[drugName]) {
-                          acc[drugName] = [];
+                        const entityName = result.entity_name;
+                        if (!acc[entityName]) {
+                          acc[entityName] = [];
                         }
-                        acc[drugName].push(result);
+                        acc[entityName].push(result);
                         return acc;
                       }, {} as Record<string, SearchResult[]>);
 
-                      // Sort drug names alphabetically
-                      const sortedDrugNames = Object.keys(groupedResults).sort();
+                      // Sort entity names alphabetically
+                      const sortedEntityNames = Object.keys(groupedResults).sort();
 
-                      return sortedDrugNames.map((drugName) => {
-                        const drugResults = groupedResults[drugName];
-                        const hasMultipleDates = drugResults.length > 1;
+                      return sortedEntityNames.map((entityName) => {
+                        const entitieResults = groupedResults[entityName];
+                        const hasMultipleDates = entitieResults.length > 1;
 
                         return (
-                          <div key={drugName} className="space-y-4">
-                            {/* Drug Name Header */}
+                          <div key={entityName} className="space-y-4">
+                            {/* Entity Name Header */}
                             <div className="flex items-center justify-between">
                               <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                                 <Pill className="h-5 w-5 text-blue-600" />
-                                {drugName}
+                                {entityName}
                                 {hasMultipleDates && (
                                   <>
                                     <span className="text-sm font-normal text-gray-600">
-                                      ({drugResults.length} documents)
+                                      ({entitieResults.length} documents)
                                     </span>
                                   </>
                                 )}
@@ -862,15 +862,15 @@ export default function DashboardPage() {
                                 <div className="flex items-center gap-2">
                                   <div className="inline-flex items-center gap-1 px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-medium">
                                     <Calendar className="h-3 w-3" />
-                                    {drugResults.length} different dates
+                                    {entitieResults.length} different dates
                                   </div>
                                 </div>
                               )}
                             </div>
 
-                            {/* Results for this drug */}
+                            {/* Results for this entity */}
                             <div className={`${hasMultipleDates ? 'space-y-3 pl-6 border-l-2 border-gray-200' : ''}`}>
-                              {drugResults.map((result) => (
+                              {entitieResults.map((result) => (
                                 <Card 
                                   key={result.source_file_id} 
                                   className={`hover:shadow-lg transition-all duration-200 border-gray-200 hover:border-blue-300 ${
@@ -883,7 +883,7 @@ export default function DashboardPage() {
                                         <div className="flex-1">
                                           {!hasMultipleDates && (
                                             <h3 className="font-semibold text-gray-900 text-lg">
-                                              {result.drug_name}
+                                              {result.entity_name}
                                             </h3>
                                           )}
                                           <p className="text-sm text-gray-600 mt-1">
@@ -985,7 +985,7 @@ export default function DashboardPage() {
                                 </div>
                                           <p className="text-xs text-gray-500 italic">
                                             {result.search_type === 'SQL' 
-                                              ? 'Found by exact drug name match' 
+                                              ? 'Found by exact entity name match' 
                                               : `Found by content similarity${result.grade_weight > 0 ? ` in ${result.grade_weight} document section${result.grade_weight > 1 ? 's' : ''}` : ''}`}
                                           </p>
                                         </div>
@@ -998,12 +998,12 @@ export default function DashboardPage() {
                                           className="flex-1 bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 text-purple-700 border-purple-200 hover:border-purple-300 transition-all duration-200"
                                           onClick={() => {
                                             // Track metadata view activity
-                                            trackView(result.drug_name, result.source_file_id);
+                                            trackView(result.entity_name, result.source_file_id);
                                             
                                             // Open metadata modal
                                             setSelectedMetadataFile({ 
                                               id: result.source_file_id, 
-                                              name: result.drug_name 
+                                              name: result.entity_name 
                                             });
                                             setMetadataModalOpen(true);
                                           }}
@@ -1016,12 +1016,12 @@ export default function DashboardPage() {
                                           className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-sm hover:shadow-md transition-all duration-200"
                                           onClick={() => {
                                             // Track chat activity
-                                            trackChat(result.drug_name || result.file_name.split('_')[0] || 'unknown', result.source_file_id);
+                                            trackChat(result.entity_name || result.file_name.split('_')[0] || 'unknown', result.source_file_id);
                                             
                                             // Open chat modal
                                             setSelectedChatFiles({
                                               ids: [result.source_file_id],
-                                              names: [result.drug_name || result.file_name.split('_')[0] || 'this document'],
+                                              names: [result.entity_name || result.file_name.split('_')[0] || 'this document'],
                                               isCollectionChat: false,
                                               collectionId: selectedCollection || -1  // Use -1 when no collection is selected
                                             });
@@ -1050,7 +1050,7 @@ export default function DashboardPage() {
                     <h3 className="text-lg font-medium text-gray-900 mb-1">No results found</h3>
                     <p className="text-gray-600">
                       {searchQuery ? `No documents match "${searchQuery}"` : 'No documents found'}
-                      {selectedDrugFilter && <span className="block text-sm mt-1">for drug: {selectedDrugFilter}</span>}
+                      {selectedEntityFilter && <span className="block text-sm mt-1">for entity: {selectedEntityFilter}</span>}
                     </p>
                     <p className="text-sm text-gray-500 mt-3">Try adjusting your search terms or filters</p>
                   </div>
@@ -1067,7 +1067,7 @@ export default function DashboardPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSearch(searchQuery, selectedDrugFilter, currentPage - 1)}
+                        onClick={() => handleSearch(searchQuery, selectedEntityFilter, currentPage - 1)}
                         disabled={!pagination.has_previous || isSearching}
                       >
                         Previous
@@ -1084,7 +1084,7 @@ export default function DashboardPage() {
                               key={pageNumber}
                               variant={pageNumber === currentPage ? "default" : "outline"}
                               size="sm"
-                              onClick={() => handleSearch(searchQuery, selectedDrugFilter, pageNumber)}
+                              onClick={() => handleSearch(searchQuery, selectedEntityFilter, pageNumber)}
                               disabled={isSearching}
                               className="min-w-[40px]"
                             >
@@ -1097,7 +1097,7 @@ export default function DashboardPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleSearch(searchQuery, selectedDrugFilter, currentPage + 1)}
+                        onClick={() => handleSearch(searchQuery, selectedEntityFilter, currentPage + 1)}
                         disabled={!pagination.has_next || isSearching}
                       >
                         Next
@@ -1109,7 +1109,7 @@ export default function DashboardPage() {
                       onValueChange={(value) => {
                         setPageSize(parseInt(value));
                         setCurrentPage(1); // Reset to first page when changing page size
-                        handleSearch(searchQuery, selectedDrugFilter, 1);
+                        handleSearch(searchQuery, selectedEntityFilter, 1);
                       }}
                     >
                       <SelectTrigger className="w-[120px]">
@@ -1129,7 +1129,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Recent History and Trending Drugs */}
+        {/* Recent History and Trending Entities */}
         <div className="flex gap-8 mb-8">
           {/* Recent History */}
           <div className="w-1/2">
@@ -1176,26 +1176,26 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Trending Drugs */}
+          {/* Trending Entities */}
           <div className="w-1/2">
             <Card className="shadow-lg border-0 h-[400px] flex flex-col">
               <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-4 flex-shrink-0">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <TrendingUp className="h-5 w-5" />
-                  Trending Drugs Search
+                  Trending Entities Search
                 </CardTitle>
               </CardHeader>
               <CardContent className="bg-gray-50 p-6 flex-grow overflow-auto">
                 <div className="space-y-3">
-                  {trendingDrugs.length > 0 && trendingDrugs[0].name !== 'No trending data' ? (
-                    trendingDrugs.slice(0, 3).map((drug, index) => (
-                      <div key={drug.id} className="flex items-center gap-3 p-3 bg-white rounded-lg hover:shadow-md transition-all duration-200 cursor-pointer group">
+                  {trendingEntitys.length > 0 && trendingEntitys[0].name !== 'No trending data' ? (
+                    trendingEntitys.slice(0, 3).map((entity, index) => (
+                      <div key={entity.id} className="flex items-center gap-3 p-3 bg-white rounded-lg hover:shadow-md transition-all duration-200 cursor-pointer group">
                         <div className="flex items-center justify-center h-8 w-8 rounded-full bg-green-600 text-white font-semibold text-sm">
                           {index + 1}
                         </div>
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{drug.name}</div>
-                          <div className="text-xs text-gray-500">{drug.indication}</div>
+                          <div className="font-medium text-gray-900">{entity.name}</div>
+                          <div className="text-xs text-gray-500">{entity.indication}</div>
                         </div>
                         <TrendingUp className="h-4 w-4 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
@@ -1203,7 +1203,7 @@ export default function DashboardPage() {
                   ) : (
                     <div className="text-center py-8">
                       <TrendingUp className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-600 font-medium">No trending drugs</p>
+                      <p className="text-gray-600 font-medium">No trending entities</p>
                       <p className="text-sm text-gray-500 mt-1">Search activity will appear here</p>
                     </div>
                   )}
@@ -1238,7 +1238,7 @@ export default function DashboardPage() {
                   <div className="text-center">
                     <Bot className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600">AI Chat functionality coming soon</p>
-                    <p className="text-sm text-gray-500 mt-2">Ask questions about drugs, interactions, and FDA data</p>
+                    <p className="text-sm text-gray-500 mt-2">Ask questions about entities, interactions, and FDA data</p>
                   </div>
                 </div>
               </CardContent>
@@ -1263,8 +1263,8 @@ export default function DashboardPage() {
                   <h4 className="font-semibold text-gray-900 mb-2">Document Information</h4>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Drug Name:</span>
-                      <span className="font-medium">{selectedResult.drug_name}</span>
+                      <span className="text-gray-600">Entity Name:</span>
+                      <span className="font-medium">{selectedResult.entity_name}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">File Name:</span>
@@ -1338,10 +1338,10 @@ export default function DashboardPage() {
                       <span className="text-gray-600">Search Query:</span>
                       <span className="ml-2 font-medium">{searchQuery || 'No query (filter only)'}</span>
                     </div>
-                    {selectedDrugFilter && (
+                    {selectedEntityFilter && (
                       <div>
-                        <span className="text-gray-600">Drug Filter:</span>
-                        <span className="ml-2 font-medium">{selectedDrugFilter}</span>
+                        <span className="text-gray-600">Entity Filter:</span>
+                        <span className="ml-2 font-medium">{selectedEntityFilter}</span>
                       </div>
                     )}
                     <div>
@@ -1384,7 +1384,7 @@ export default function DashboardPage() {
               setSelectedMetadataFile(null);
             }}
             sourceFileId={selectedMetadataFile.id}
-            drugName={selectedMetadataFile.name}
+            entityName={selectedMetadataFile.name}
           />
         )}
 
@@ -1397,8 +1397,8 @@ export default function DashboardPage() {
               setSelectedChatFiles(null);
             }}
             sourceFileIds={selectedChatFiles.ids}
-            drugNames={selectedChatFiles.names}
-            drugDocuments={selectedChatFiles.drugDocuments}
+            entityNames={selectedChatFiles.names}
+            entitieDocuments={selectedChatFiles.entitieDocuments}
             collectionName={selectedChatFiles.isCollectionChat && selectedCollection ? collections.find(c => c.id === selectedCollection)?.name : undefined}
             collectionId={selectedChatFiles.isCollectionChat ? selectedCollection : selectedChatFiles.collectionId}
             isDocXChat={true}  // Only document chats use v2 endpoint

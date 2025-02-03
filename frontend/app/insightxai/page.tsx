@@ -19,7 +19,7 @@ interface SearchResult {
   source_file_id: number;
   file_name: string;
   file_url: string;
-  drug_name: string;
+  entity_name: string;
   us_ma_date?: string;
   relevance_score: number;
   relevance_comments: string;
@@ -238,33 +238,33 @@ export default function InsightXAIPage() {
     try {
       const collectionDetails = await apiService.getCollectionDetails(selectedCollection.id);
       // Don't pass sourceFileIds - let the backend handle collection-based queries
-      const drugNames = collectionDetails.documents.map((doc: any) => doc.drug_name || doc.file_name);
+      const entityNames = collectionDetails.documents.map((doc: any) => doc.entity_name || doc.file_name);
       
-      // Create drug documents grouped by drug name
-      const drugDocMap = new Map();
+      // Create entity documents grouped by entity name
+      const entitieDocMap = new Map();
       collectionDetails.documents.forEach((doc: any) => {
-        const drugName = doc.drug_name || doc.file_name;
-        if (!drugDocMap.has(drugName)) {
-          drugDocMap.set(drugName, {
-            drugName,
+        const entityName = doc.entity_name || doc.file_name;
+        if (!entitieDocMap.has(entityName)) {
+          entitieDocMap.set(entityName, {
+            entityName,
             documents: []
           });
         }
-        drugDocMap.get(drugName).documents.push({
+        entitieDocMap.get(entityName).documents.push({
           id: doc.id,
           fileName: doc.file_name
         });
       });
       
-      const drugDocuments = Array.from(drugDocMap.values())
-        .sort((a, b) => a.drugName.localeCompare(b.drugName));
+      const entitieDocuments = Array.from(entitieDocMap.values())
+        .sort((a, b) => a.entityName.localeCompare(b.entityName));
   
       setChatModalProps({
         isOpen: true,
         onClose: () => setChatModalOpen(false),
         sourceFileIds: [],  // Pass empty array for collection-based queries
-        drugNames,
-        drugDocuments,  // Pass the grouped drug documents
+        entityNames,
+        entitieDocuments,  // Pass the grouped entity documents
         initialMessage: query,
         collectionName: selectedCollection.name,
         collectionId: selectedCollection.id,
@@ -395,7 +395,7 @@ export default function InsightXAIPage() {
       <div className="card-tech p-8 mb-8">
         <h3 className="text-2xl font-bold text-center mb-4 text-foreground">Start a Conversation</h3>
         <p className="text-center text-muted-foreground mb-6 max-w-3xl mx-auto">
-          Select your preferred regulatory database (FDA, EMA, HTA, or other collections) and ask questions to receive AI-powered insights from official pharmaceutical documents. Our system searches across comprehensive drug labels, clinical data, and regulatory information to provide accurate, context-aware answers.
+          Select your preferred regulatory database (FDA, EMA, HTA, or other collections) and ask questions to receive AI-powered insights from official pharmaceutical documents. Our system searches across comprehensive entity labels, clinical data, and regulatory information to provide accurate, context-aware answers.
         </p>
         
         {/* Collection Selection Section */}

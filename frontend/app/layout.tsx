@@ -4,8 +4,8 @@ import { AppLayout } from '@/components/Navigation/AppLayout'
 import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
-  title: 'FDA Drug Information System | RAG Dashboard',
-  description: 'Advanced FDA drug information search and analysis platform with AI-powered insights',
+  title: 'FDA Entity Information System | RAG Dashboard',
+  description: 'Advanced FDA entity information search and analysis platform with AI-powered insights',
   generator: 'FDA RAG System',
 }
 

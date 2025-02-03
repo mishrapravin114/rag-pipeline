@@ -523,7 +523,7 @@ export default function CollectionsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="page-title">DocXAI Collections</h1>
+            <h1 className="page-title">DocuGenius Collections</h1>
             <p className="text-blue-700 mt-1">
               Organize and manage document collections for focused searches and analysis
             </p>
@@ -779,7 +779,7 @@ export default function CollectionsPage() {
                     className="mt-1.5"
                     value={collectionForm.name}
                     onChange={(e) => setCollectionForm({...collectionForm, name: e.target.value})}
-                    placeholder="e.g., Cardiovascular Drugs, Q4 2024 Approvals"
+                    placeholder="e.g., Cardiovascular Entities, Q4 2024 Approvals"
                   />
                 </div>
 
@@ -801,7 +801,7 @@ export default function CollectionsPage() {
                     <Info className="h-5 w-5 text-blue-600 mt-0.5" />
                     <div className="text-sm text-blue-800">
                       <p className="font-medium mb-1">What are collections?</p>
-                      <p>Collections are AI-powered workspaces in DocXAI that let you group related documents for smarter search and analysis.</p>
+                      <p>Collections are AI-powered workspaces in DocuGenius that let you group related documents for smarter search and analysis.</p>
                     </div>
                   </div>
                 </div>
@@ -866,7 +866,7 @@ export default function CollectionsPage() {
                     className="mt-1.5"
                     value={collectionForm.name}
                     onChange={(e) => setCollectionForm({...collectionForm, name: e.target.value})}
-                    placeholder="e.g., Cardiovascular Drugs, Q4 2024 Approvals"
+                    placeholder="e.g., Cardiovascular Entities, Q4 2024 Approvals"
                   />
                 </div>
 
