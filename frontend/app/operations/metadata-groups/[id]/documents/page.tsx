@@ -30,7 +30,7 @@ interface Document {
   id: number;
   file_name: string;
   file_url: string;
-  drug_name?: string;
+  entity_name?: string;
   status: string;
   created_at: string;
 }
@@ -88,7 +88,7 @@ export default function MetadataGroupDocumentsPage() {
   useEffect(() => {
     const filtered = documents.filter(doc =>
       doc.file_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (doc.drug_name && doc.drug_name.toLowerCase().includes(searchTerm.toLowerCase()))
+      (doc.entity_name && doc.entity_name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     setFilteredDocuments(filtered);
   }, [searchTerm, documents]);
@@ -176,7 +176,7 @@ export default function MetadataGroupDocumentsPage() {
                           className="group"
                         >
                           <h3 className="text-lg font-medium text-gray-900 mb-1 group-hover:text-blue-600 transition-colors flex items-center gap-2">
-                            {doc.drug_name ? `${doc.drug_name} - ${doc.file_name}` : doc.file_name}
+                            {doc.entity_name ? `${doc.entity_name} - ${doc.file_name}` : doc.file_name}
                             <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </h3>
                         </Link>

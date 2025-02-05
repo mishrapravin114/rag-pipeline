@@ -638,7 +638,7 @@ const ConfigureMetadataPage = () => {
                 <Input
                   value={newConfig.metadata_name}
                   onChange={(e) => setNewConfig({...newConfig, metadata_name: e.target.value})}
-                  placeholder="e.g., Drug Name, Manufacturer, Approval Date"
+                  placeholder="e.g., Entity Name, Manufacturer, Approval Date"
                 />
               </div>
 

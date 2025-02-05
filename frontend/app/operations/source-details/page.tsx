@@ -46,7 +46,7 @@ interface SourceFile {
   id: number;
   file_name: string;
   file_url: string;
-  drug_name?: string;
+  entity_name?: string;
   status: string;
   file_size?: string;
   file_type?: string;
@@ -64,7 +64,7 @@ interface SourceFile {
 interface UploadForm {
   file_name: string;
   file_url: string;
-  drug_name: string;
+  entity_name: string;
   description: string;
   us_ma_date: string;
   collection_id?: number;
@@ -81,7 +81,7 @@ interface Collection {
 interface BulkUploadItem {
   file_name: string;
   file_url: string;
-  drug_name?: string;
+  entity_name?: string;
   comments?: string;
   us_ma_date?: string;
 }
@@ -158,7 +158,7 @@ export default function SourceDetailsPage() {
   const [uploadForm, setUploadForm] = useState<UploadForm>({
     file_name: '',
     file_url: '',
-    drug_name: '',
+    entity_name: '',
     description: '',
     us_ma_date: '',
     collection_id: undefined
@@ -287,7 +287,7 @@ export default function SourceDetailsPage() {
         // Handle file upload
         const formData = new FormData();
         formData.append('file', selectedFile);
-        formData.append('drug_name', uploadForm.drug_name || '');
+        formData.append('entity_name', uploadForm.entity_name || '');
         formData.append('comments', uploadForm.description || '');
         formData.append('us_ma_date', uploadForm.us_ma_date || '');
         if (uploadForm.collection_id) {
@@ -300,7 +300,7 @@ export default function SourceDetailsPage() {
         newFile = await apiService.createSourceFile({
           file_name: uploadForm.file_name,
           file_url: uploadForm.file_url,
-          drug_name: uploadForm.drug_name,
+          entity_name: uploadForm.entity_name,
           comments: uploadForm.description,
           us_ma_date: uploadForm.us_ma_date,
           status: 'PENDING',
@@ -311,7 +311,7 @@ export default function SourceDetailsPage() {
       // Add to local state
       setSourceFiles([newFile, ...sourceFiles]);
       setIsUploadModalOpen(false);
-      setUploadForm({ file_name: '', file_url: '', drug_name: '', description: '', us_ma_date: '', collection_id: undefined });
+      setUploadForm({ file_name: '', file_url: '', entity_name: '', description: '', us_ma_date: '', collection_id: undefined });
       setSelectedFile(null);
       setUploadMethod('url');
       setError(null);
@@ -697,7 +697,7 @@ export default function SourceDetailsPage() {
             const item: BulkUploadItem = {
               file_name: fileName.toString().trim(),
               file_url: fileUrl.toString().trim(),
-              drug_name: (rowData.drug_name || rowData.drugname || rowData['drug name'] || '')?.toString().trim() || undefined,
+              entity_name: (rowData.entity_name || rowData.entityname || rowData['entity name'] || '')?.toString().trim() || undefined,
               comments: (rowData.comments || rowData.description || rowData.notes || '')?.toString().trim() || undefined,
               us_ma_date: (rowData.us_ma_date || rowData['us ma date'] || rowData['us_ma_date'] || '')?.toString().trim() || undefined
             };
@@ -981,7 +981,7 @@ export default function SourceDetailsPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search files, drug names, URLs, comments, or creators..."
+                  placeholder="Search files, entity names, URLs, comments, or creators..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -1056,7 +1056,7 @@ export default function SourceDetailsPage() {
                         <div className="flex items-center gap-3 mb-2">
                           {getStatusIcon(file.status)}
                           <h3 className="text-lg font-medium text-gray-900 truncate">
-                            {file.drug_name ? `${file.drug_name}-${file.file_name}` : file.file_name}
+                            {file.entity_name ? `${file.entity_name}-${file.file_name}` : file.file_name}
                           </h3>
                           <Badge variant={getStatusBadgeVariant(file.status)}>
                             {file.status}
@@ -1475,11 +1475,11 @@ export default function SourceDetailsPage() {
 
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Drug Name
+                  Entity Name
                 </label>
                 <Input
-                  value={uploadForm.drug_name}
-                  onChange={(e) => setUploadForm({...uploadForm, drug_name: e.target.value})}
+                  value={uploadForm.entity_name}
+                  onChange={(e) => setUploadForm({...uploadForm, entity_name: e.target.value})}
                   placeholder="e.g., Ozempic, Lipitor, Advil"
                 />
               </div>
@@ -1597,12 +1597,12 @@ export default function SourceDetailsPage() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">File Name:</span>
                     <span className="font-medium text-gray-900 break-all max-w-xs text-right">
-                      {deleteFileData.drug_name ? `${deleteFileData.drug_name}-${deleteFileData.file_name}` : deleteFileData.file_name}
+                      {deleteFileData.entity_name ? `${deleteFileData.entity_name}-${deleteFileData.file_name}` : deleteFileData.file_name}
                     </span>
                 </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Drug Name:</span>
-                    <span className="font-medium text-gray-900">{deleteFileData.drug_name || 'N/A'}</span>
+                    <span className="text-gray-600">Entity Name:</span>
+                    <span className="font-medium text-gray-900">{deleteFileData.entity_name || 'N/A'}</span>
                           </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Current Status:</span>
@@ -1704,7 +1704,7 @@ export default function SourceDetailsPage() {
                 <ul className="text-sm text-blue-800 space-y-1">
                   <li>• Download the Excel template to see the required format</li>
                   <li>• Required columns: <code>file_name</code> and <code>file_url</code></li>
-                  <li>• Optional columns: <code>drug_name</code>, <code>comments</code></li>
+                  <li>• Optional columns: <code>entity_name</code>, <code>comments</code></li>
                   <li>• Upload your Excel file (.xlsx or .xls) and preview the data before uploading</li>
                 </ul>
               </div>
@@ -1753,7 +1753,7 @@ export default function SourceDetailsPage() {
                           <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">Row</th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">File Name</th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">File URL</th>
-                          <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">Drug Name</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">Entity Name</th>
                           <th className="px-3 py-2 text-left font-medium text-gray-700 border-b">Comments</th>
                         </tr>
                       </thead>
@@ -1765,7 +1765,7 @@ export default function SourceDetailsPage() {
                             <td className="px-3 py-2 text-blue-600 truncate max-w-xs">
                               {item.file_url}
                             </td>
-                            <td className="px-3 py-2 text-gray-600">{item.drug_name || '-'}</td>
+                            <td className="px-3 py-2 text-gray-600">{item.entity_name || '-'}</td>
                             <td className="px-3 py-2 text-gray-600 truncate max-w-xs">
                               {item.comments || '-'}
                             </td>
@@ -1868,8 +1868,8 @@ export default function SourceDetailsPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="font-medium text-green-900">Row {item.row}: {item.file_name}</span>
-                            {item.drug_name && (
-                              <span className="text-sm text-green-700 ml-2">({item.drug_name})</span>
+                            {item.entity_name && (
+                              <span className="text-sm text-green-700 ml-2">({item.entity_name})</span>
                             )}
                           </div>
                           <div className="text-sm text-green-600">ID: {item.id}</div>
@@ -1938,7 +1938,7 @@ export default function SourceDetailsPage() {
                 </Button>
               </CardTitle>
               <div className="text-sm text-gray-600">
-                <p><strong>Drug:</strong> {viewingDocuments.source_file.drug_name || 'N/A'}</p>
+                <p><strong>Entity:</strong> {viewingDocuments.source_file.entity_name || 'N/A'}</p>
                 <div><strong>Status:</strong> <Badge variant={getStatusBadgeVariant(viewingDocuments.source_file.status)}>{viewingDocuments.source_file.status}</Badge></div>
                 <p><strong>Total Documents:</strong> {viewingDocuments.total_documents}</p>
               </div>
@@ -1980,8 +1980,8 @@ export default function SourceDetailsPage() {
                                 <p className="text-gray-600">{doc.metadata.page_number || 'N/A'}</p>
                   </div>
                               <div>
-                                <span className="font-medium text-gray-700">Drug Name:</span>
-                                <p className="text-gray-600">{doc.metadata.drug_name || 'N/A'}</p>
+                                <span className="font-medium text-gray-700">Entity Name:</span>
+                                <p className="text-gray-600">{doc.metadata.entity_name || 'N/A'}</p>
                 </div>
                   <div>
                                 <span className="font-medium text-gray-700">Content Length:</span>
@@ -2067,10 +2067,10 @@ export default function SourceDetailsPage() {
                       {reprocessFileData.status}
                     </Badge>
                   </div>
-                  {reprocessFileData.drug_name && (
+                  {reprocessFileData.entity_name && (
                   <div className="flex justify-between">
-                      <span className="text-purple-700">Drug Name:</span>
-                      <span className="font-medium text-purple-900">{reprocessFileData.drug_name}</span>
+                      <span className="text-purple-700">Entity Name:</span>
+                      <span className="font-medium text-purple-900">{reprocessFileData.entity_name}</span>
                   </div>
                   )}
                   <div className="flex justify-between">

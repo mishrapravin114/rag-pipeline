@@ -47,7 +47,7 @@ interface SourceFile {
   id: number;
   file_name: string;
   file_url: string;
-  drug_name?: string;
+  entity_name?: string;
   us_ma_date?: string;
   status: string;
   metadata_extracted: boolean;
@@ -61,7 +61,7 @@ interface ExtractedMetadata {
   id: number;
   metadata_name: string;
   value: string;
-  drugname?: string;
+  entityname?: string;
   confidence_score?: number;
   extraction_prompt?: string;
   created_at?: string;
@@ -71,7 +71,7 @@ interface ExtractedMetadata {
 
 interface DocumentMetadata {
   file_name?: string;
-  drug_name?: string;
+  entity_name?: string;
   page_number?: number;
   page_num?: number; // Sometimes it's stored as page_num
   original_content?: string;
@@ -83,7 +83,7 @@ interface MetadataViewData {
   source_file_id: number;
   file_name: string;
   file_url: string;
-  drug_name?: string;
+  entity_name?: string;
   metadata_extracted: boolean;
   metadata_count: number;
   metadata: ExtractedMetadata[];
@@ -259,7 +259,7 @@ export default function ViewMetadataPage() {
           source_file_id: sourceFileId,
           file_name: file.file_name,
           file_url: file.file_url,
-          drug_name: file.drug_name,
+          entity_name: file.entity_name,
           metadata_extracted: file.metadata_extracted,
           metadata_count: file.metadata_count,
           metadata: []
@@ -475,7 +475,7 @@ export default function ViewMetadataPage() {
     // Prepare data for Excel export with only specified columns
     const excelData = metadata.metadata.map((item) => ({
       'File URL': metadata.file_url || '',
-      'Drug Name': metadata.drug_name || '',
+      'Entity Name': metadata.entity_name || '',
       'US MA Date': sourceFile?.us_ma_date || '',
       'Metadata Name': item.metadata_name,
       'Extracted Value': item.value || 'Not found',
@@ -490,7 +490,7 @@ export default function ViewMetadataPage() {
     // Set column widths
     const colWidths = [
       { wch: 40 }, // File URL
-      { wch: 20 }, // Drug Name
+      { wch: 20 }, // Entity Name
       { wch: 15 }, // US MA Date
       { wch: 25 }, // Metadata Name
       { wch: 50 }, // Extracted Value
@@ -503,7 +503,7 @@ export default function ViewMetadataPage() {
     XLSX.utils.book_append_sheet(wb, ws, 'Metadata Export');
 
     // Generate filename and save
-    const fileName = `metadata_${metadata.drug_name || metadata.file_name.replace(/\.[^/.]+$/, "")}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `metadata_${metadata.entity_name || metadata.file_name.replace(/\.[^/.]+$/, "")}_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
     
     toast.success('Excel file downloaded successfully', {
@@ -531,7 +531,7 @@ export default function ViewMetadataPage() {
       // Set column widths
       const colWidths = [
         { wch: 40 }, // File URL
-        { wch: 20 }, // Drug Name
+        { wch: 20 }, // Entity Name
         { wch: 15 }, // US MA Date
         { wch: 25 }, // Metadata Name
         { wch: 50 }, // Extracted Value
@@ -547,7 +547,7 @@ export default function ViewMetadataPage() {
       const fileName = `all_metadata_export_${new Date().toISOString().split('T')[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
       
-      toast.success(`Exported ${response.total_records} metadata records for ${response.total_drugs} drugs`, {
+      toast.success(`Exported ${response.total_records} metadata records for ${response.total_entities} entities`, {
         duration: 3000,
         position: 'top-right',
       });
@@ -586,7 +586,7 @@ export default function ViewMetadataPage() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      toast.success(`Exported ${response.total_records} metadata records for ${response.total_drugs} drugs`, {
+      toast.success(`Exported ${response.total_records} metadata records for ${response.total_entities} entities`, {
         duration: 3000,
         position: 'top-right',
       });
@@ -634,7 +634,7 @@ export default function ViewMetadataPage() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search files by name, URL, or drug name..."
+                placeholder="Search files by name, URL, or entity name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -809,7 +809,7 @@ export default function ViewMetadataPage() {
                         File Information
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Drug Name
+                        Entity Name
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Status
@@ -843,7 +843,7 @@ export default function ViewMetadataPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            {file.drug_name || 'Not specified'}
+                            {file.entity_name || 'Not specified'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -1049,8 +1049,8 @@ export default function ViewMetadataPage() {
                         <span className="ml-2">{viewingMetadata.file_name}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-gray-600">Drug Name:</span> 
-                        <span className="ml-2">{viewingMetadata.drug_name || 'Not specified'}</span>
+                        <span className="font-medium text-gray-600">Entity Name:</span> 
+                        <span className="ml-2">{viewingMetadata.entity_name || 'Not specified'}</span>
                       </div>
                       <div>
                         <span className="font-medium text-gray-600">Total Fields:</span> 
@@ -1368,8 +1368,8 @@ export default function ViewMetadataPage() {
                             <span className="ml-2">{doc.file_name || 'N/A'}</span>
                           </div>
                           <div>
-                            <span className="font-medium text-gray-600">Drug:</span>
-                            <span className="ml-2">{doc.drug_name || 'N/A'}</span>
+                            <span className="font-medium text-gray-600">Entity:</span>
+                            <span className="ml-2">{doc.entity_name || 'N/A'}</span>
                           </div>
                         </div>
                         {(doc.original_content || doc.content) && (
@@ -1428,7 +1428,7 @@ export default function ViewMetadataPage() {
                   Debug logs are saved in: <code className="bg-gray-100 px-1 rounded">backend/metadata_extraction_debug/{lastDebugSessionId}</code>
                 </p>
                 <p className="text-gray-500 text-xs mt-1">
-                  Folder format: <code className="bg-gray-100 px-1 rounded">[drug_name]_[timestamp]_[id]</code>
+                  Folder format: <code className="bg-gray-100 px-1 rounded">[entity_name]_[timestamp]_[id]</code>
                 </p>
                 <div className="mt-3">
                   <p className="font-medium mb-1">Debug files include:</p>
