@@ -31,13 +31,13 @@ interface NavigationItem {
 
 const navigationItems: NavigationItem[] = [
   {
-    name: 'DocXAI',
+    name: 'DocuGenius',
     href: '/dashboard',
     icon: <Home className="h-5 w-5" />
   },
   {
-    name: 'InsightXAI',
-    href: '/insightxai',
+    name: 'Raglior',
+    href: '/raglior',
     icon: <FileText className="h-5 w-5" />
   },
   {
@@ -165,7 +165,7 @@ export function Sidebar() {
       {/* Header */}
       <div className="flex items-center justify-center px-4 py-6 border-b border-sidebar-border">
         <div className="flex items-center justify-center">
-          <img src="https://staging.api-rxinsightx.com/assets/rx-logo-DoGvMM2Q.svg" alt="RxInsightX Logo" className="h-10 w-auto max-w-full" />
+          <img src="/raglior-logo.svg" alt="Raglior Logo" className="h-10 w-auto max-w-full" />
         </div>
       </div>
       
