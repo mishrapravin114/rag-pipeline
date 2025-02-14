@@ -27,11 +27,11 @@ import { apiService } from '@/services/api';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
-interface DrugMetadata {
+interface EntityMetadata {
   id: number;
   metadata_name: string;
   value: string;
-  drugname: string;
+  entityname: string;
   source_file_id: number;
   file_url: string;
   created_at: string;
@@ -41,7 +41,7 @@ interface SourceFile {
   id: number;
   file_name: string;
   file_url: string;
-  drug_name: string;
+  entity_name: string;
   status: string;
 }
 
@@ -49,7 +49,7 @@ interface MetadataModalProps {
   isOpen: boolean;
   onClose: () => void;
   sourceFileId: number;
-  drugName?: string;
+  entityName?: string;
 }
 
 // Generate consistent color for metadata names
@@ -100,9 +100,9 @@ const toTitleCase = (str: string) => {
   }).join(' ');
 };
 
-export function MetadataModal({ isOpen, onClose, sourceFileId, drugName }: MetadataModalProps) {
+export function MetadataModal({ isOpen, onClose, sourceFileId, entityName }: MetadataModalProps) {
   const [loading, setLoading] = useState(true);
-  const [metadata, setMetadata] = useState<DrugMetadata[]>([]);
+  const [metadata, setMetadata] = useState<EntityMetadata[]>([]);
   const [sourceFile, setSourceFile] = useState<SourceFile | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
@@ -118,7 +118,7 @@ export function MetadataModal({ isOpen, onClose, sourceFileId, drugName }: Metad
   const loadMetadata = async () => {
     setLoading(true);
     try {
-      const response = await apiService.getDrugMetadata(sourceFileId);
+      const response = await apiService.getEntityMetadata(sourceFileId);
       setMetadata(response.metadata || []);
       setSourceFile(response.source_file);
     } catch (error) {
@@ -150,7 +150,7 @@ export function MetadataModal({ isOpen, onClose, sourceFileId, drugName }: Metad
       const data = metadata.map(item => ({
         'Metadata Name': toTitleCase(item.metadata_name),
         'Value': item.value,
-        'Drug Name': item.drugname,
+        'Entity Name': item.entityname,
         'Created Date': new Date(item.created_at).toLocaleDateString()
       }));
       
@@ -163,7 +163,7 @@ export function MetadataModal({ isOpen, onClose, sourceFileId, drugName }: Metad
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${sourceFile?.drug_name || 'drug'}_metadata_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.download = `${sourceFile?.entity_name || 'entity'}_metadata_${new Date().toISOString().split('T')[0]}.xlsx`;
       link.click();
       window.URL.revokeObjectURL(url);
       
@@ -174,7 +174,7 @@ export function MetadataModal({ isOpen, onClose, sourceFileId, drugName }: Metad
     }
   };
 
-  const MetadataCard = ({ item }: { item: DrugMetadata }) => {
+  const MetadataCard = ({ item }: { item: EntityMetadata }) => {
     const colorGradient = getMetadataColor(item.metadata_name);
     
     return (
@@ -191,7 +191,7 @@ export function MetadataModal({ isOpen, onClose, sourceFileId, drugName }: Metad
     );
   };
 
-  const MetadataListItem = ({ item, index }: { item: DrugMetadata; index: number }) => {
+  const MetadataListItem = ({ item, index }: { item: EntityMetadata; index: number }) => {
     const colorGradient = getMetadataColor(item.metadata_name);
     const isEvenRow = index % 2 === 0;
     
@@ -228,7 +228,7 @@ export function MetadataModal({ isOpen, onClose, sourceFileId, drugName }: Metad
         )}>
           {/* Visually hidden title for accessibility */}
           <DialogPrimitive.Title className="sr-only">
-            Drug Metadata Dashboard
+            Entity Metadata Dashboard
           </DialogPrimitive.Title>
           {/* Header */}
           <div className="px-6 py-5 border-b bg-gradient-to-r from-blue-600 to-indigo-700 flex-shrink-0">
@@ -238,9 +238,9 @@ export function MetadataModal({ isOpen, onClose, sourceFileId, drugName }: Metad
                   <Database className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">Drug Metadata Dashboard</h2>
+                  <h2 className="text-xl font-bold text-white">Entity Metadata Dashboard</h2>
                   <p className="text-blue-100 mt-1">
-                    {sourceFile?.drug_name || drugName || 'Loading...'} 
+                    {sourceFile?.entity_name || entityName || 'Loading...'} 
                     {sourceFile?.file_name && (
                       <>
                         <span className="mx-2">•</span>

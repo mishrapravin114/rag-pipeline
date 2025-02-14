@@ -10,23 +10,23 @@ interface ChatMessage {
   content: string;
   role: "user" | "assistant";
   timestamp: Date;
-  drugId?: string;
+  entityId?: string;
 }
 
 interface ChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedDrug?: {
+  selectedEntity?: {
     id: string;
     source_file_id?: number;
-    drug_name: string;
+    entity_name: string;
     indication: string;
     manufacturer: string;
   } | null;
-  selectedDrugs?: {
+  selectedEntitys?: {
     id: string;
     source_file_id?: number;
-    drug_name: string;
+    entity_name: string;
     indication: string;
     manufacturer: string;
   }[] | null;
@@ -73,7 +73,7 @@ const formatChatMessage = (content: string) => {
     });
 };
 
-export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: ChatPanelProps) {
+export function ChatPanel({ isOpen, onClose, selectedEntity, selectedEntitys }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -88,13 +88,13 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
       // Add welcome message when chat opens
       let welcomeContent: string;
       
-      if (selectedDrugs && selectedDrugs.length > 1) {
-        const drugNames = selectedDrugs.map(d => d.drug_name).join(", ");
-        welcomeContent = `Hello! I'm here to help you compare and learn about multiple drugs: ${drugNames}. You can ask me questions about their indications, compare their safety profiles, dosing differences, or any other aspects across these drugs. What would you like to know?`;
-      } else if (selectedDrug) {
-        welcomeContent = `Hello! I'm here to help you learn about ${selectedDrug.drug_name}. You can ask me questions about its indication, dosage, efficacy, safety profile, or any other aspect of this drug. What would you like to know?`;
+      if (selectedEntitys && selectedEntitys.length > 1) {
+        const entityNames = selectedEntitys.map(d => d.entity_name).join(", ");
+        welcomeContent = `Hello! I'm here to help you compare and learn about multiple entities: ${entityNames}. You can ask me questions about their indications, compare their safety profiles, dosing differences, or any other aspects across these entities. What would you like to know?`;
+      } else if (selectedEntity) {
+        welcomeContent = `Hello! I'm here to help you learn about ${selectedEntity.entity_name}. You can ask me questions about its indication, dosage, efficacy, safety profile, or any other aspect of this entity. What would you like to know?`;
       } else {
-        welcomeContent = "Hello! I'm your FDA document assistant. You can ask me questions about any of the drugs in our database, their indications, safety profiles, dosing, or clinical trial data. How can I help you today?";
+        welcomeContent = "Hello! I'm your FDA document assistant. You can ask me questions about any of the entities in our database, their indications, safety profiles, dosing, or clinical trial data. How can I help you today?";
       }
       
       const welcomeMessage: ChatMessage = {
@@ -110,7 +110,7 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
         inputRef.current?.focus();
       }, 100);
     }
-  }, [isOpen, selectedDrug, selectedDrugs]);
+  }, [isOpen, selectedEntity, selectedEntitys]);
 
   useEffect(() => {
     scrollToBottom();
@@ -137,9 +137,9 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
           timestamp: msg.timestamp
         }));
         
-        // Prepare selected drugs data
-        const drugsData = selectedDrugs?.map(d => ({ drug_name: d.drug_name })) || 
-                         (selectedDrug ? [{ drug_name: selectedDrug.drug_name }] : []);
+        // Prepare selected entities data
+        const entitiesData = selectedEntitys?.map(d => ({ entity_name: d.entity_name })) || 
+                         (selectedEntity ? [{ entity_name: selectedEntity.entity_name }] : []);
         
         const token = localStorage.getItem('access_token');
         const headers: Record<string, string> = {
@@ -155,7 +155,7 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
           headers,
           body: JSON.stringify({
             chat_history: chatHistory,
-            selected_drugs: drugsData,
+            selected_entities: entitiesData,
             last_response: lastAssistantMessage?.content || ''
           })
         });
@@ -174,27 +174,27 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
     
     // Fallback to client-side suggestions for initial state or if API fails
     if (messages.length === 1) {
-      if (selectedDrugs && selectedDrugs.length > 1) {
-        const drugNames = selectedDrugs.map(d => d.drug_name);
+      if (selectedEntitys && selectedEntitys.length > 1) {
+        const entityNames = selectedEntitys.map(d => d.entity_name);
         setSuggestions([
-          `Compare the indications of ${drugNames.join(' and ')}`,
-          `What are the safety differences between ${drugNames.join(' vs ')}?`,
-          `How do dosing regimens differ for ${drugNames.join(', ')}?`,
-          `Which is more effective: ${drugNames[0]} or ${drugNames.slice(1).join(' or ')}?`
+          `Compare the indications of ${entityNames.join(' and ')}`,
+          `What are the safety differences between ${entityNames.join(' vs ')}?`,
+          `How do dosing regimens differ for ${entityNames.join(', ')}?`,
+          `Which is more effective: ${entityNames[0]} or ${entityNames.slice(1).join(' or ')}?`
         ]);
-      } else if (selectedDrug) {
+      } else if (selectedEntity) {
         setSuggestions([
-          `What is the indication for ${selectedDrug.drug_name}?`,
-          `What are the most common side effects of ${selectedDrug.drug_name}?`,
-          `What is the recommended dosage for ${selectedDrug.drug_name}?`,
-          `Are there any contraindications for ${selectedDrug.drug_name}?`
+          `What is the indication for ${selectedEntity.entity_name}?`,
+          `What are the most common side effects of ${selectedEntity.entity_name}?`,
+          `What is the recommended dosage for ${selectedEntity.entity_name}?`,
+          `Are there any contraindications for ${selectedEntity.entity_name}?`
         ]);
       } else {
         setSuggestions([
-          "Search for drugs by indication",
-          "Compare multiple drugs",
+          "Search for entities by indication",
+          "Compare multiple entities",
           "Show recent FDA approvals",
-          "Explain drug safety monitoring"
+          "Explain entity safety monitoring"
         ]);
       }
       return;
@@ -206,18 +206,18 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
 
     // If discussing indications
     if (lastContent.includes("indication") || lastContent.includes("treat")) {
-      if (selectedDrugs && selectedDrugs.length > 1) {
-        const drugNames = selectedDrugs.map(d => d.drug_name);
+      if (selectedEntitys && selectedEntitys.length > 1) {
+        const entityNames = selectedEntitys.map(d => d.entity_name);
         newSuggestions.push(
-          `What clinical trials support these indications for ${drugNames.join(' and ')}?`,
-          `Are there off-label uses for ${drugNames.join(' or ')}?`,
-          `How does ${drugNames[0]} efficacy compare to ${drugNames.slice(1).join(' and ')}?`
+          `What clinical trials support these indications for ${entityNames.join(' and ')}?`,
+          `Are there off-label uses for ${entityNames.join(' or ')}?`,
+          `How does ${entityNames[0]} efficacy compare to ${entityNames.slice(1).join(' and ')}?`
         );
-      } else if (selectedDrug) {
+      } else if (selectedEntity) {
         newSuggestions.push(
-          `What clinical trials support ${selectedDrug.drug_name}'s indication?`,
-          `Are there any off-label uses for ${selectedDrug.drug_name}?`,
-          `How does ${selectedDrug.drug_name} compare to standard of care?`
+          `What clinical trials support ${selectedEntity.entity_name}'s indication?`,
+          `Are there any off-label uses for ${selectedEntity.entity_name}?`,
+          `How does ${selectedEntity.entity_name} compare to standard of care?`
         );
       } else {
         newSuggestions.push(
@@ -230,25 +230,25 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
 
     // If discussing safety/side effects
     if (lastContent.includes("side effect") || lastContent.includes("adverse") || lastContent.includes("safety")) {
-      if (selectedDrugs && selectedDrugs.length > 1) {
-        const drugNames = selectedDrugs.map(d => d.drug_name);
+      if (selectedEntitys && selectedEntitys.length > 1) {
+        const entityNames = selectedEntitys.map(d => d.entity_name);
         newSuggestions.push(
-          `What are the contraindications for ${drugNames.join(' vs ')}?`,
-          `Compare drug interactions between ${drugNames.join(' and ')}`,
-          `Which requires more monitoring: ${drugNames.join(' or ')}?`,
-          `Compare serious adverse events for ${drugNames.join(' vs ')}?`
+          `What are the contraindications for ${entityNames.join(' vs ')}?`,
+          `Compare entity interactions between ${entityNames.join(' and ')}`,
+          `Which requires more monitoring: ${entityNames.join(' or ')}?`,
+          `Compare serious adverse events for ${entityNames.join(' vs ')}?`
         );
-      } else if (selectedDrug) {
+      } else if (selectedEntity) {
         newSuggestions.push(
-          `What are the contraindications for ${selectedDrug.drug_name}?`,
-          `Does ${selectedDrug.drug_name} have any drug interactions?`,
-          `What monitoring is required for ${selectedDrug.drug_name}?`,
-          `How common are serious adverse events with ${selectedDrug.drug_name}?`
+          `What are the contraindications for ${selectedEntity.entity_name}?`,
+          `Does ${selectedEntity.entity_name} have any entity interactions?`,
+          `What monitoring is required for ${selectedEntity.entity_name}?`,
+          `How common are serious adverse events with ${selectedEntity.entity_name}?`
         );
       } else {
         newSuggestions.push(
           "What are the contraindications?",
-          "Are there any drug interactions?",
+          "Are there any entity interactions?",
           "What monitoring is required?",
           "How common are serious adverse events?"
         );
@@ -257,20 +257,20 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
 
     // If discussing dosage
     if (lastContent.includes("dose") || lastContent.includes("dosing") || lastContent.includes("administration")) {
-      if (selectedDrugs && selectedDrugs.length > 1) {
-        const drugNames = selectedDrugs.map(d => d.drug_name);
+      if (selectedEntitys && selectedEntitys.length > 1) {
+        const entityNames = selectedEntitys.map(d => d.entity_name);
         newSuggestions.push(
-          `Compare dose adjustments for ${drugNames.join(' vs ')}`,
-          `Which is easier to administer: ${drugNames.join(' or ')}?`,
-          `Compare dosing frequency for ${drugNames.join(' and ')}`,
-          `Do ${drugNames.join(' or ')} require dose titration?`
+          `Compare dose adjustments for ${entityNames.join(' vs ')}`,
+          `Which is easier to administer: ${entityNames.join(' or ')}?`,
+          `Compare dosing frequency for ${entityNames.join(' and ')}`,
+          `Do ${entityNames.join(' or ')} require dose titration?`
         );
-      } else if (selectedDrug) {
+      } else if (selectedEntity) {
         newSuggestions.push(
-          `Are there dose adjustments for ${selectedDrug.drug_name} in special populations?`,
-          `What if a dose of ${selectedDrug.drug_name} is missed?`,
-          `Can ${selectedDrug.drug_name} be taken with food?`,
-          `How should ${selectedDrug.drug_name} be stored?`
+          `Are there dose adjustments for ${selectedEntity.entity_name} in special populations?`,
+          `What if a dose of ${selectedEntity.entity_name} is missed?`,
+          `Can ${selectedEntity.entity_name} be taken with food?`,
+          `How should ${selectedEntity.entity_name} be stored?`
         );
       } else {
         newSuggestions.push(
@@ -284,20 +284,20 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
 
     // If discussing efficacy
     if (lastContent.includes("efficacy") || lastContent.includes("effective") || lastContent.includes("clinical trial")) {
-      if (selectedDrugs && selectedDrugs.length > 1) {
-        const drugNames = selectedDrugs.map(d => d.drug_name);
+      if (selectedEntitys && selectedEntitys.length > 1) {
+        const entityNames = selectedEntitys.map(d => d.entity_name);
         newSuggestions.push(
-          `Compare primary endpoints for ${drugNames.join(' vs ')}`,
-          `Which had larger clinical trials: ${drugNames.join(' or ')}?`,
-          `Compare response rates between ${drugNames.join(' and ')}`,
-          `Which shows faster onset: ${drugNames.join(' or ')}?`
+          `Compare primary endpoints for ${entityNames.join(' vs ')}`,
+          `Which had larger clinical trials: ${entityNames.join(' or ')}?`,
+          `Compare response rates between ${entityNames.join(' and ')}`,
+          `Which shows faster onset: ${entityNames.join(' or ')}?`
         );
-      } else if (selectedDrug) {
+      } else if (selectedEntity) {
         newSuggestions.push(
-          `What were the primary endpoints for ${selectedDrug.drug_name}?`,
-          `How many patients were studied for ${selectedDrug.drug_name}?`,
-          `What was the response rate for ${selectedDrug.drug_name}?`,
-          `How long does ${selectedDrug.drug_name} treatment typically last?`
+          `What were the primary endpoints for ${selectedEntity.entity_name}?`,
+          `How many patients were studied for ${selectedEntity.entity_name}?`,
+          `What was the response rate for ${selectedEntity.entity_name}?`,
+          `How long does ${selectedEntity.entity_name} treatment typically last?`
         );
       } else {
         newSuggestions.push(
@@ -309,14 +309,14 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
       }
     }
 
-    // If comparing drugs
-    if (selectedDrugs && selectedDrugs.length > 1 && lastContent.includes("compar")) {
-      const drugNames = selectedDrugs.map(d => d.drug_name);
+    // If comparing entities
+    if (selectedEntitys && selectedEntitys.length > 1 && lastContent.includes("compar")) {
+      const entityNames = selectedEntitys.map(d => d.entity_name);
       newSuggestions.push(
-        `Which has fewer side effects: ${drugNames.join(' or ')}?`,
-        `Compare the costs of ${drugNames.join(' vs ')}`,
-        `Is ${drugNames[0]} easier to administer than ${drugNames.slice(1).join(' or ')}?`,
-        `Which has better adherence: ${drugNames.join(' or ')}?`
+        `Which has fewer side effects: ${entityNames.join(' or ')}?`,
+        `Compare the costs of ${entityNames.join(' vs ')}`,
+        `Is ${entityNames[0]} easier to administer than ${entityNames.slice(1).join(' or ')}?`,
+        `Which has better adherence: ${entityNames.join(' or ')}?`
       );
     }
 
@@ -364,21 +364,21 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      // Use document-specific chat endpoint for DocXAI
+      // Use document-specific chat endpoint for DocuGenius
       const requestPayload: any = { 
         message: inputValue
       };
 
-      // Add source file ID(s) based on selected drug(s)
-      if (selectedDrugs && selectedDrugs.length > 1) {
-        // Multiple drugs - use source_file_ids
-        requestPayload.source_file_ids = selectedDrugs.map(d => d.source_file_id).filter(id => id);
-      } else if (selectedDrug && selectedDrug.source_file_id) {
-        // Single drug - use source_file_id
-        requestPayload.source_file_id = selectedDrug.source_file_id;
-      } else if (selectedDrugs && selectedDrugs.length === 1 && selectedDrugs[0].source_file_id) {
-        // Single drug in array - use source_file_id
-        requestPayload.source_file_id = selectedDrugs[0].source_file_id;
+      // Add source file ID(s) based on selected entity(s)
+      if (selectedEntitys && selectedEntitys.length > 1) {
+        // Multiple entities - use source_file_ids
+        requestPayload.source_file_ids = selectedEntitys.map(d => d.source_file_id).filter(id => id);
+      } else if (selectedEntity && selectedEntity.source_file_id) {
+        // Single entity - use source_file_id
+        requestPayload.source_file_id = selectedEntity.source_file_id;
+      } else if (selectedEntitys && selectedEntitys.length === 1 && selectedEntitys[0].source_file_id) {
+        // Single entity in array - use source_file_id
+        requestPayload.source_file_id = selectedEntitys[0].source_file_id;
       }
 
       const response = await apiService.sendChatMessage(requestPayload);
@@ -443,17 +443,17 @@ export function ChatPanel({ isOpen, onClose, selectedDrug, selectedDrugs }: Chat
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-base bg-gradient-to-r from-blue-800 to-indigo-700 bg-clip-text text-transparent">
-              {selectedDrugs && selectedDrugs.length > 1 
-                ? `Compare: ${selectedDrugs.map(d => d.drug_name).join(' vs ')}` 
-                : selectedDrug 
-                  ? `Chat about ${selectedDrug.drug_name}` 
+              {selectedEntitys && selectedEntitys.length > 1 
+                ? `Compare: ${selectedEntitys.map(d => d.entity_name).join(' vs ')}` 
+                : selectedEntity 
+                  ? `Chat about ${selectedEntity.entity_name}` 
                   : "FDA Document Assistant"}
             </h3>
             <p className="text-xs text-blue-600/70 font-medium">
-              {selectedDrugs && selectedDrugs.length > 1
-                ? `Analyzing ${selectedDrugs.length} drugs side-by-side`
-                : selectedDrug 
-                  ? "Ask questions about this drug" 
+              {selectedEntitys && selectedEntitys.length > 1
+                ? `Analyzing ${selectedEntitys.length} entities side-by-side`
+                : selectedEntity 
+                  ? "Ask questions about this entity" 
                   : "Ask questions about any FDA document"}
             </p>
           </div>

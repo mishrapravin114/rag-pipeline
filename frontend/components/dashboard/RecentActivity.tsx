@@ -9,7 +9,7 @@ interface ActivityItem {
   description: string;
   timestamp: string;
   metadata?: {
-    drugName?: string;
+    entityName?: string;
     query?: string;
     count?: number;
   };
@@ -58,10 +58,10 @@ export function RecentActivity() {
             return {
               id: item.id || `activity-${index}`,
               type: activityType as any,
-              description: item.description || `${activityType === 'search' ? 'Searched for' : activityType === 'view' ? 'Viewed' : 'Downloaded'} ${item.drug_name || item.search_term || 'document'}`,
+              description: item.description || `${activityType === 'search' ? 'Searched for' : activityType === 'view' ? 'Viewed' : 'Downloaded'} ${item.entity_name || item.search_term || 'document'}`,
               timestamp: item.created_at || new Date(Date.now() - 1000 * 60 * 60 * index).toISOString(),
               metadata: {
-                drugName: item.drug_name,
+                entityName: item.entity_name,
                 query: item.search_term,
                 count: item.result_count,
               },
@@ -83,14 +83,14 @@ export function RecentActivity() {
               type: "view",
               description: "Viewed JEMPERLI details",
               timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-              metadata: { drugName: "JEMPERLI" },
+              metadata: { entityName: "JEMPERLI" },
             },
             {
               id: "3",
               type: "download",
               description: "Downloaded GAVRETO PDF",
               timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-              metadata: { drugName: "GAVRETO", count: 1 },
+              metadata: { entityName: "GAVRETO", count: 1 },
             },
             {
               id: "4",
@@ -121,7 +121,7 @@ export function RecentActivity() {
           {
             id: "2",
             type: "view",
-            description: "Viewed drug comparison",
+            description: "Viewed entity comparison",
             timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
             metadata: { count: 3 },
           },
