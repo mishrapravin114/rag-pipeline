@@ -169,7 +169,7 @@ export const ConfigurationEditModal: React.FC<ConfigurationEditModalProps> = ({
                   id="name"
                   value={formData.metadata_name}
                   onChange={(e) => setFormData({ ...formData, metadata_name: e.target.value })}
-                  placeholder="e.g., Drug Name, Dosage Form"
+                  placeholder="e.g., Entity Name, Dosage Form"
                   className={cn(errors.metadata_name && "border-red-500")}
                 />
                 {errors.metadata_name && (

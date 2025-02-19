@@ -8,7 +8,7 @@ interface Activity {
   text: string;
   time: string;
   query?: string;
-  drug_name?: string;
+  entity_name?: string;
   results_count?: number;
   source_file_id?: number;
   isLocal?: boolean;
@@ -44,7 +44,7 @@ export function useActivityTracker() {
         text: item.text,
         time: getTimeAgo(new Date(item.timestamp)),
         query: item.query,
-        drug_name: item.drug_name,
+        entity_name: item.entity_name,
         results_count: item.results_count,
         source_file_id: item.source_file_id,
         timestamp: new Date(item.timestamp),
@@ -76,13 +76,13 @@ export function useActivityTracker() {
                 text: formatActivityText({
                   action_type: 'chat',
                   query: item.query || item.user_query,
-                  drug_name: item.drug_name,
+                  entity_name: item.entity_name,
                   search_query: item.query || item.user_query,
                   user_query: item.query || item.user_query
                 }),
                 time: getTimeAgo(new Date(item.created_at)),
                 query: item.query || item.user_query,
-                drug_name: item.drug_name,
+                entity_name: item.entity_name,
                 timestamp: new Date(item.created_at),
                 isLocal: false
               }));
@@ -104,13 +104,13 @@ export function useActivityTracker() {
               text: formatActivityText({
                 action_type: item.type,
                 query: item.query,
-                drug_name: item.drugName || item.drug_name,
+                entity_name: item.entityName || item.entity_name,
                 search_query: item.query,
                 user_query: item.query
               }),
               time: getTimeAgo(new Date(item.timestamp)),
               query: item.query,
-              drug_name: item.drugName || item.drug_name,
+              entity_name: item.entityName || item.entity_name,
               timestamp: new Date(item.timestamp),
               isLocal: false
             }));
@@ -132,7 +132,7 @@ export function useActivityTracker() {
           text: formatActivityText(item),
           time: getTimeAgo(new Date(item.timestamp || item.created_at)),
           query: item.query || item.search_query || item.user_query,
-          drug_name: item.drug_name,
+          entity_name: item.entity_name,
           results_count: item.results_count,
           source_file_id: item.source_file_id,
           timestamp: new Date(item.timestamp || item.created_at),
@@ -162,7 +162,7 @@ export function useActivityTracker() {
           id: 'default-1',
           type: 'info',
           text: 'No recent activity',
-          time: 'Start exploring FDA drugs',
+          time: 'Start exploring FDA entities',
           isLocal: false
         }]);
       }
@@ -178,7 +178,7 @@ export function useActivityTracker() {
           text: item.text,
           time: getTimeAgo(new Date(item.timestamp)),
           query: item.query,
-          drug_name: item.drug_name,
+          entity_name: item.entity_name,
           results_count: item.results_count,
           source_file_id: item.source_file_id,
           timestamp: new Date(item.timestamp),
@@ -203,16 +203,16 @@ export function useActivityTracker() {
   const formatActivityText = (item: any) => {
     const type = item.action_type || 'search';
     const query = item.query || item.search_query || item.user_query || '';
-    const drugName = item.drug_name;
+    const entityName = item.entity_name;
 
     switch (type) {
       case 'search':
-        if (drugName && query) {
-          return `Searched for "${query}" in ${drugName}`;
+        if (entityName && query) {
+          return `Searched for "${query}" in ${entityName}`;
         } else if (query) {
           return `Searched for "${query}"`;
-        } else if (drugName) {
-          return `Filtered by ${drugName}`;
+        } else if (entityName) {
+          return `Filtered by ${entityName}`;
         }
         return 'Performed search';
       
@@ -223,16 +223,16 @@ export function useActivityTracker() {
           const displayQuery = query.length > 100 ? query.substring(0, 97) + '...' : query;
           return `Asked: "${displayQuery}"`;
         }
-        return drugName ? `Chat about ${drugName}` : 'Started chat session';
+        return entityName ? `Chat about ${entityName}` : 'Started chat session';
       
       case 'view':
-        return drugName ? `Viewed ${drugName}` : 'Viewed document';
+        return entityName ? `Viewed ${entityName}` : 'Viewed document';
       
       case 'file_view':
-        return `Viewed document: ${drugName || query}`;
+        return `Viewed document: ${entityName || query}`;
       
       case 'download':
-        return `Downloaded ${drugName || 'document'}`;
+        return `Downloaded ${entityName || 'document'}`;
       
       default:
         return query || 'Activity recorded';
@@ -271,58 +271,58 @@ export function useActivityTracker() {
   }, []);
 
   // Track search activity
-  const trackSearch = useCallback((query: string, drugName?: string, resultsCount?: number) => {
+  const trackSearch = useCallback((query: string, entityName?: string, resultsCount?: number) => {
     // Save to local storage
-    activityService.trackSearch(query, drugName, resultsCount);
+    activityService.trackSearch(query, entityName, resultsCount);
     
     // Add to state immediately
     addActivity({
       type: 'search',
-      text: drugName ? `Searched for "${query}" in ${drugName}` : `Searched for "${query}"`,
+      text: entityName ? `Searched for "${query}" in ${entityName}` : `Searched for "${query}"`,
       query,
-      drug_name: drugName,
+      entity_name: entityName,
       results_count: resultsCount
     });
   }, [addActivity]);
 
   // Track view activity
-  const trackView = useCallback((drugName: string, sourceFileId?: number) => {
+  const trackView = useCallback((entityName: string, sourceFileId?: number) => {
     // Save to local storage
-    activityService.trackView(drugName, sourceFileId);
+    activityService.trackView(entityName, sourceFileId);
     
     // Add to state immediately
     addActivity({
       type: 'view',
-      text: `Viewed metadata for ${drugName}`,
-      drug_name: drugName,
+      text: `Viewed metadata for ${entityName}`,
+      entity_name: entityName,
       source_file_id: sourceFileId
     });
   }, [addActivity]);
 
   // Track chat activity
-  const trackChat = useCallback((drugName: string, sourceFileId?: number) => {
+  const trackChat = useCallback((entityName: string, sourceFileId?: number) => {
     // Save to local storage
-    activityService.trackChat(drugName, sourceFileId);
+    activityService.trackChat(entityName, sourceFileId);
     
     // Add to state immediately
     addActivity({
       type: 'chat',
-      text: `Started chat about ${drugName}`,
-      drug_name: drugName,
+      text: `Started chat about ${entityName}`,
+      entity_name: entityName,
       source_file_id: sourceFileId
     });
   }, [addActivity]);
 
   // Track download activity
-  const trackDownload = useCallback((drugName: string, sourceFileId?: number) => {
+  const trackDownload = useCallback((entityName: string, sourceFileId?: number) => {
     // Save to local storage
-    activityService.trackDownload(drugName, sourceFileId);
+    activityService.trackDownload(entityName, sourceFileId);
     
     // Add to state immediately
     addActivity({
       type: 'download',
-      text: `Downloaded ${drugName}`,
-      drug_name: drugName,
+      text: `Downloaded ${entityName}`,
+      entity_name: entityName,
       source_file_id: sourceFileId
     });
   }, [addActivity]);

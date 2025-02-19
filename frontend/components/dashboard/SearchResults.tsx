@@ -6,14 +6,14 @@ import { ArrowLeft, ExternalLink, Calendar, Building, Pill, MessageSquare, Downl
 interface SearchResult {
   id: string;
   source_file_id?: number;
-  drug_name: string;
+  entity_name: string;
   manufacturer: string;
   approval_date: string;
   indication: string;
   regulatory_classification: string;
 }
 
-interface DrugSection {
+interface EntitySection {
   id: number;
   type: string;
   title: string;
@@ -21,10 +21,10 @@ interface DrugSection {
   order: number;
 }
 
-interface DrugDetails {
+interface EntityDetails {
   basic_info: {
     id: number;
-    drug_name: string;
+    entity_name: string;
     therapeutic_area?: string;
     approval_status: string;
     country: string;
@@ -37,7 +37,7 @@ interface DrugDetails {
     pdufa_date?: string;
     approval_date?: string;
   };
-  sections: DrugSection[];
+  sections: EntitySection[];
   page_info?: {
     total_pages: number;
     page_numbers: number[];
@@ -52,57 +52,57 @@ interface SearchResultsProps {
   results: SearchResult[];
   isLoading: boolean;
   onBackToDashboard: () => void;
-  onChatWithDrug?: (drug: SearchResult) => void;
-  onChatWithMultipleDrugs?: (drugs: SearchResult[]) => void;
-  initialSelectedDrug?: SearchResult | null;
+  onChatWithEntity?: (entity: SearchResult) => void;
+  onChatWithMultipleEntities?: (entities: SearchResult[]) => void;
+  initialSelectedEntity?: SearchResult | null;
 }
 
-export function SearchResults({ results, isLoading, onBackToDashboard, onChatWithDrug, onChatWithMultipleDrugs, initialSelectedDrug }: SearchResultsProps) {
-  const [selectedDrug, setSelectedDrug] = useState<SearchResult | null>(initialSelectedDrug || null);
-  const [drugDetails, setDrugDetails] = useState<DrugDetails | null>(null);
+export function SearchResults({ results, isLoading, onBackToDashboard, onChatWithEntity, onChatWithMultipleEntities, initialSelectedEntity }: SearchResultsProps) {
+  const [selectedEntity, setSelectedEntity] = useState<SearchResult | null>(initialSelectedEntity || null);
+  const [entityDetails, setEntityDetails] = useState<EntityDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState<'overview' | 'sections' | 'timeline'>('overview');
-  const [selectedDrugsForChat, setSelectedDrugsForChat] = useState<Set<string>>(new Set());
+  const [selectedEntitiesForChat, setSelectedEntitiesForChat] = useState<Set<string>>(new Set());
 
-  // Fetch detailed drug information
-  const fetchDrugDetails = async (drugId: string) => {
+  // Fetch detailed entity information
+  const fetchEntityDetails = async (entityId: string) => {
     setLoadingDetails(true);
     try {
       // Import the API service
       const { apiService } = await import('../../services/api');
       
-      // Fetch real drug details from the backend
-      const details = await apiService.getDrugDetails(drugId);
-      setDrugDetails(details);
+      // Fetch real entity details from the backend
+      const details = await apiService.getEntityDetails(entityId);
+      setEntityDetails(details);
     } catch (error) {
-      console.error("Error fetching drug details:", error);
+      console.error("Error fetching entity details:", error);
       
       // Fallback to mock data if API fails
-      const mockDetails: DrugDetails = {
+      const mockDetails: EntityDetails = {
         basic_info: {
-          id: parseInt(drugId),
-          drug_name: selectedDrug?.drug_name || "Unknown Drug",
-          therapeutic_area: selectedDrug?.indication,
+          id: parseInt(entityId),
+          entity_name: selectedEntity?.entity_name || "Unknown Entity",
+          therapeutic_area: selectedEntity?.indication,
           approval_status: "Approved",
           country: "United States",
-          applicant: selectedDrug?.manufacturer || "Unknown",
+          applicant: selectedEntity?.manufacturer || "Unknown",
           active_substance: ["Active Ingredient 1", "Active Ingredient 2"],
-          regulatory: `FDA ${selectedDrug?.regulatory_classification}`
+          regulatory: `FDA ${selectedEntity?.regulatory_classification}`
         },
         timeline: {
           submission_date: "2023-01-15",
           pdufa_date: "2023-10-15",
-          approval_date: selectedDrug?.approval_date
+          approval_date: selectedEntity?.approval_date
         },
         sections: [
           {
             id: 1,
             type: "indication",
             title: "Indications and Usage",
-            content: `${selectedDrug?.drug_name} is indicated for the treatment of ${selectedDrug?.indication}. This indication is based on comprehensive clinical trials demonstrating significant efficacy and acceptable safety profile in the target patient population.
+            content: `${selectedEntity?.entity_name} is indicated for the treatment of ${selectedEntity?.indication}. This indication is based on comprehensive clinical trials demonstrating significant efficacy and acceptable safety profile in the target patient population.
 
-Clinical studies have shown consistent therapeutic benefit across diverse patient demographics, with primary endpoints met with statistical significance. The drug has been shown to provide meaningful clinical improvement in patients with the specified condition.
+Clinical studies have shown consistent therapeutic benefit across diverse patient demographics, with primary endpoints met with statistical significance. The entity has been shown to provide meaningful clinical improvement in patients with the specified condition.
 
 Healthcare providers should carefully evaluate patient eligibility and consider individual risk factors before prescribing this medication.`,
             order: 1
@@ -111,7 +111,7 @@ Healthcare providers should carefully evaluate patient eligibility and consider 
             id: 2,
             type: "dosage",
             title: "Dosage and Administration",
-            content: `The recommended dosage of ${selectedDrug?.drug_name} varies based on patient factors, disease severity, and treatment response.
+            content: `The recommended dosage of ${selectedEntity?.entity_name} varies based on patient factors, disease severity, and treatment response.
 
 **Initial Dosing:**
 • Adults: Standard initial dose as per prescribing guidelines
@@ -127,14 +127,14 @@ Healthcare providers should carefully evaluate patient eligibility and consider 
 **Dose Modifications:**
 • Dose adjustments may be necessary based on patient response
 • Monitor for efficacy and tolerability
-• Consider drug interactions when co-administering with other medications`,
+• Consider entity interactions when co-administering with other medications`,
             order: 2
           },
           {
             id: 3,
             type: "contraindications",
             title: "Contraindications",
-            content: `${selectedDrug?.drug_name} is contraindicated in patients with:
+            content: `${selectedEntity?.entity_name} is contraindicated in patients with:
 
 • Known hypersensitivity to the active ingredient or any component of the formulation
 • Severe hepatic impairment (Child-Pugh Class C)
@@ -153,7 +153,7 @@ Healthcare providers should carefully screen patients for contraindications befo
             content: `**Serious Warnings:**
 • Monitor for signs of serious adverse reactions
 • Regular laboratory monitoring may be required
-• Potential for drug-drug interactions
+• Potential for entity-entity interactions
 
 **Precautions:**
 • Use with caution in elderly patients
@@ -200,7 +200,7 @@ Healthcare providers and patients are encouraged to report adverse events to the
             id: 6,
             type: "clinical_studies",
             title: "Clinical Studies",
-            content: `The efficacy and safety of ${selectedDrug?.drug_name} were established in randomized, double-blind, placebo-controlled clinical trials.
+            content: `The efficacy and safety of ${selectedEntity?.entity_name} were established in randomized, double-blind, placebo-controlled clinical trials.
 
 **Study Design:**
 • Phase III multicenter trials
@@ -228,7 +228,7 @@ Extended follow-up studies demonstrate sustained efficacy and continued acceptab
             type: "pharmacology",
             title: "Clinical Pharmacology",
             content: `**Mechanism of Action:**
-${selectedDrug?.drug_name} works through [specific mechanism] to provide therapeutic benefit in the target condition.
+${selectedEntity?.entity_name} works through [specific mechanism] to provide therapeutic benefit in the target condition.
 
 **Pharmacokinetics:**
 • Absorption: Well absorbed after oral administration
@@ -250,34 +250,34 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
             order: 7
           }
         ],
-        file_url: "/api/documents/download/sample-drug-document.pdf",
+        file_url: "/api/documents/download/sample-entity-document.pdf",
         metadata: {
-          document_type: "Drug Label",
+          document_type: "Entity Label",
           pages: 45,
           last_updated: "2024-01-15",
           version: "1.2"
         }
       };
       
-      setDrugDetails(mockDetails);
+      setEntityDetails(mockDetails);
     } finally {
       setLoadingDetails(false);
     }
   };
 
   useEffect(() => {
-    if (selectedDrug) {
-      fetchDrugDetails(selectedDrug.id);
+    if (selectedEntity) {
+      fetchEntityDetails(selectedEntity.id);
       setExpandedSections(new Set([1])); // Expand first section by default
     }
-  }, [selectedDrug]);
+  }, [selectedEntity]);
 
-  // Handle initial selected drug
+  // Handle initial selected entity
   useEffect(() => {
-    if (initialSelectedDrug && !selectedDrug) {
-      setSelectedDrug(initialSelectedDrug);
+    if (initialSelectedEntity && !selectedEntity) {
+      setSelectedEntity(initialSelectedEntity);
     }
-  }, [initialSelectedDrug]);
+  }, [initialSelectedEntity]);
 
   const toggleSection = (sectionId: number) => {
     const newExpanded = new Set(expandedSections);
@@ -289,45 +289,45 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
     setExpandedSections(newExpanded);
   };
 
-  const toggleDrugSelection = (drugId: string) => {
-    const newSelected = new Set(selectedDrugsForChat);
-    if (newSelected.has(drugId)) {
-      newSelected.delete(drugId);
+  const toggleEntitySelection = (entityId: string) => {
+    const newSelected = new Set(selectedEntitiesForChat);
+    if (newSelected.has(entityId)) {
+      newSelected.delete(entityId);
     } else {
-      newSelected.add(drugId);
+      newSelected.add(entityId);
     }
-    setSelectedDrugsForChat(newSelected);
+    setSelectedEntitiesForChat(newSelected);
   };
 
   const handleChatWithSelected = () => {
-    if (selectedDrugsForChat.size > 0 && onChatWithMultipleDrugs) {
-      const selectedResults = results.filter(drug => selectedDrugsForChat.has(drug.id));
-      onChatWithMultipleDrugs(selectedResults);
+    if (selectedEntitiesForChat.size > 0 && onChatWithMultipleEntities) {
+      const selectedResults = results.filter(entity => selectedEntitiesForChat.has(entity.id));
+      onChatWithMultipleEntities(selectedResults);
     }
   };
 
   const downloadPDF = async () => {
-    if (!drugDetails || !selectedDrug) return;
+    if (!entityDetails || !selectedEntity) return;
     
     try {
       // Import the API service
       const { apiService } = await import('../../services/api');
       
-      // Use source_file_id if available, otherwise try using the drug ID
-      const downloadId = selectedDrug.source_file_id ? 
-        selectedDrug.source_file_id.toString() : 
-        drugDetails.basic_info.id.toString();
+      // Use source_file_id if available, otherwise try using the entity ID
+      const downloadId = selectedEntity.source_file_id ? 
+        selectedEntity.source_file_id.toString() : 
+        entityDetails.basic_info.id.toString();
       
-      console.log('Downloading PDF with ID:', downloadId, 'source_file_id:', selectedDrug.source_file_id);
+      console.log('Downloading PDF with ID:', downloadId, 'source_file_id:', selectedEntity.source_file_id);
       
       // Download the PDF document from the backend
-      const blob = await apiService.downloadDrugPDF(downloadId);
+      const blob = await apiService.downloadEntityPDF(downloadId);
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${drugDetails.basic_info.drug_name.replace(/[^a-zA-Z0-9]/g, '_')}_FDA_Label.pdf`;
+      link.download = `${entityDetails.basic_info.entity_name.replace(/[^a-zA-Z0-9]/g, '_')}_FDA_Label.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -336,7 +336,7 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
       console.error("Error downloading PDF:", error);
       
       // More informative error message
-      alert(`Unable to download PDF for ${drugDetails?.basic_info.drug_name}. The document may not be available.`);
+      alert(`Unable to download PDF for ${entityDetails?.basic_info.entity_name}. The document may not be available.`);
     }
   };
 
@@ -407,28 +407,28 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
           </h2>
         </div>
         
-        {/* Multi-drug chat button */}
-        {results.length > 1 && onChatWithMultipleDrugs && (
+        {/* Multi-entity chat button */}
+        {results.length > 1 && onChatWithMultipleEntities && (
           <div className="flex items-center space-x-3">
-            {selectedDrugsForChat.size > 0 && (
+            {selectedEntitiesForChat.size > 0 && (
               <span className="text-sm text-gray-600">
-                {selectedDrugsForChat.size} selected
+                {selectedEntitiesForChat.size} selected
               </span>
             )}
             <button
               onClick={handleChatWithSelected}
-              disabled={selectedDrugsForChat.size === 0}
+              disabled={selectedEntitiesForChat.size === 0}
               className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-300 shadow-lg btn-professional ${
-                selectedDrugsForChat.size > 0
+                selectedEntitiesForChat.size > 0
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:from-blue-700 hover:to-indigo-800'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
               <MessageSquare className="w-4 h-4" />
-              <span>Chat with Selected ({selectedDrugsForChat.size})</span>
+              <span>Chat with Selected ({selectedEntitiesForChat.size})</span>
             </button>
             <button
-              onClick={() => onChatWithMultipleDrugs(results)}
+              onClick={() => onChatWithMultipleEntities(results)}
               className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl hover:from-gray-700 hover:to-gray-800 transition-all duration-300 shadow-lg btn-professional"
             >
               <MessageSquare className="w-4 h-4" />
@@ -445,21 +445,21 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
             <button
               onClick={() => {
                 const allIds = new Set(results.map(r => r.id));
-                setSelectedDrugsForChat(allIds);
+                setSelectedEntitiesForChat(allIds);
               }}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium btn-professional-subtle"
             >
               Select All
             </button>
             <button
-              onClick={() => setSelectedDrugsForChat(new Set())}
+              onClick={() => setSelectedEntitiesForChat(new Set())}
               className="text-sm text-gray-600 hover:text-gray-700 font-medium btn-professional-subtle"
             >
               Clear Selection
             </button>
           </div>
           <div className="text-sm text-gray-500">
-            Select drugs to compare in chat
+            Select entities to compare in chat
           </div>
         </div>
       )}
@@ -485,10 +485,10 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                 <div className="absolute top-4 right-4 z-10">
                   <input
                     type="checkbox"
-                    checked={selectedDrugsForChat.has(result.id)}
+                    checked={selectedEntitiesForChat.has(result.id)}
                     onChange={(e) => {
                       e.stopPropagation();
-                      toggleDrugSelection(result.id);
+                      toggleEntitySelection(result.id);
                     }}
                     className="w-5 h-5 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
                   />
@@ -497,11 +497,11 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
               
               <div 
                 className="space-y-4 cursor-pointer"
-                onClick={() => setSelectedDrug(result)}
+                onClick={() => setSelectedEntity(result)}
               >
                 <div>
                   <h3 className="text-lg font-bold text-gray-900 mb-2 pr-8">
-                    {result.drug_name}
+                    {result.entity_name}
                   </h3>
                   <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
                     {result.indication}
@@ -528,15 +528,15 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                     {result.regulatory_classification}
                   </span>
                   <div className="flex items-center space-x-2">
-                    {onChatWithDrug && (
+                    {onChatWithEntity && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          console.log('SearchResults: Calling onChatWithDrug with:', result);
-                          onChatWithDrug(result);
+                          console.log('SearchResults: Calling onChatWithEntity with:', result);
+                          onChatWithEntity(result);
                         }}
                         className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 rounded-lg transition-all duration-200 btn-professional-subtle"
-                        title="Chat about this drug"
+                        title="Chat about this entity"
                       >
                         <MessageSquare className="w-4 h-4" />
                       </button>
@@ -550,8 +550,8 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
         </div>
       )}
 
-      {/* Enhanced Drug Detail Modal */}
-      {selectedDrug && (
+      {/* Enhanced Entity Detail Modal */}
+      {selectedEntity && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 rounded-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden shadow-2xl border border-blue-100/50">
             {/* Modal Header */}
@@ -562,10 +562,10 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-800 to-indigo-700 bg-clip-text text-transparent">
-                  {selectedDrug.drug_name}
+                  {selectedEntity.entity_name}
                 </h2>
                   <p className="text-sm text-blue-600/70 font-medium">
-                    Comprehensive Drug Information
+                    Comprehensive Entity Information
                   </p>
                 </div>
               </div>
@@ -578,7 +578,7 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                   <span>Download PDF</span>
                 </button>
                 <button
-                  onClick={() => setSelectedDrug(null)}
+                  onClick={() => setSelectedEntity(null)}
                   className="p-2 text-gray-400 hover:text-gray-600 rounded-xl hover:bg-white/50 transition-all duration-200 btn-professional-subtle"
                 >
                   <span className="sr-only">Close</span>
@@ -618,7 +618,7 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   <span className="ml-3 text-gray-600">Loading detailed information...</span>
                 </div>
-              ) : drugDetails ? (
+              ) : entityDetails ? (
                 <>
                   {/* Overview Tab */}
                   {activeTab === 'overview' && (
@@ -630,7 +630,7 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                             <Building className="w-4 h-4 mr-2 text-blue-600" />
                             Manufacturer
                           </h3>
-                          <p className="text-lg font-medium text-gray-900">{drugDetails.basic_info.applicant}</p>
+                          <p className="text-lg font-medium text-gray-900">{entityDetails.basic_info.applicant}</p>
                         </div>
                         <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-blue-100/50 shadow-sm">
                           <h3 className="text-sm font-semibold text-gray-500 mb-2 flex items-center">
@@ -638,7 +638,7 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                             Status
                           </h3>
                           <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800">
-                            {drugDetails.basic_info.approval_status}
+                            {entityDetails.basic_info.approval_status}
                           </span>
                         </div>
                         <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-blue-100/50 shadow-sm">
@@ -646,7 +646,7 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                             <FileText className="w-4 h-4 mr-2 text-indigo-600" />
                             Classification
                           </h3>
-                          <p className="text-lg font-medium text-gray-900">{drugDetails.basic_info.regulatory}</p>
+                          <p className="text-lg font-medium text-gray-900">{entityDetails.basic_info.regulatory}</p>
                         </div>
                       </div>
 
@@ -657,26 +657,26 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                           Therapeutic Area & Indication
                         </h3>
                         <p className="text-gray-700 leading-relaxed">
-                          {drugDetails.basic_info.therapeutic_area || selectedDrug.indication}
+                          {entityDetails.basic_info.therapeutic_area || selectedEntity.indication}
                         </p>
                       </div>
 
                       {/* Active Substances */}
-                      {drugDetails.basic_info.active_substance && (
+                      {entityDetails.basic_info.active_substance && (
                         <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 border border-blue-100/50 shadow-sm">
                           <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
                             <Pill className="w-5 h-5 mr-2 text-green-600" />
                             Active Substances
                           </h3>
                           <div className="flex flex-wrap gap-2">
-                            {Array.isArray(drugDetails.basic_info.active_substance) 
-                              ? drugDetails.basic_info.active_substance.map((substance: string, index: number) => (
+                            {Array.isArray(entityDetails.basic_info.active_substance) 
+                              ? entityDetails.basic_info.active_substance.map((substance: string, index: number) => (
                                   <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
                                     {substance}
                                   </span>
                                 ))
                               : <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                                  {drugDetails.basic_info.active_substance}
+                                  {entityDetails.basic_info.active_substance}
                                 </span>
                             }
                           </div>
@@ -688,7 +688,7 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                   {/* Sections Tab */}
                   {activeTab === 'sections' && (
                     <div className="space-y-4">
-                      {drugDetails.sections.map((section) => (
+                      {entityDetails.sections.map((section) => (
                         <div key={section.id} className="bg-white/80 backdrop-blur-sm rounded-xl border border-blue-100/50 shadow-sm overflow-hidden">
                           <button
                             onClick={() => toggleSection(section.id)}
@@ -751,79 +751,79 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                           Regulatory Timeline
                         </h3>
                         <div className="space-y-4">
-                          {drugDetails.timeline?.submission_date && (
+                          {entityDetails.timeline?.submission_date && (
                             <div className="flex items-center space-x-4">
                               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                   <div>
                                 <p className="font-medium text-gray-900">Submission Date</p>
                                 <p className="text-sm text-gray-600">
-                                  {new Date(drugDetails.timeline.submission_date).toLocaleDateString()}
+                                  {new Date(entityDetails.timeline.submission_date).toLocaleDateString()}
                                 </p>
                               </div>
                   </div>
                           )}
-                          {drugDetails.timeline?.pdufa_date && (
+                          {entityDetails.timeline?.pdufa_date && (
                             <div className="flex items-center space-x-4">
                               <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                   <div>
                                 <p className="font-medium text-gray-900">PDUFA Date</p>
                                 <p className="text-sm text-gray-600">
-                                  {new Date(drugDetails.timeline.pdufa_date).toLocaleDateString()}
+                                  {new Date(entityDetails.timeline.pdufa_date).toLocaleDateString()}
                     </p>
                   </div>
                             </div>
                           )}
-                          {drugDetails.timeline?.approval_date && (
+                          {entityDetails.timeline?.approval_date && (
                             <div className="flex items-center space-x-4">
                               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <div>
                                 <p className="font-medium text-gray-900">Approval Date</p>
                                 <p className="text-sm text-gray-600">
-                                  {new Date(drugDetails.timeline.approval_date).toLocaleDateString()}
+                                  {new Date(entityDetails.timeline.approval_date).toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
                           )}
                           
                           {/* Show message if no timeline data available */}
-                          {(!drugDetails.timeline?.submission_date && !drugDetails.timeline?.pdufa_date && !drugDetails.timeline?.approval_date) && (
+                          {(!entityDetails.timeline?.submission_date && !entityDetails.timeline?.pdufa_date && !entityDetails.timeline?.approval_date) && (
                             <div className="text-center py-8">
-                              <p className="text-gray-600">Timeline information is not available for this drug.</p>
+                              <p className="text-gray-600">Timeline information is not available for this entity.</p>
                             </div>
                           )}
                   </div>
                 </div>
                 
                       {/* Document Metadata */}
-                      {(drugDetails.metadata || drugDetails.page_info) && (
+                      {(entityDetails.metadata || entityDetails.page_info) && (
                         <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 border border-blue-100/50 shadow-sm">
                           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                             <FileText className="w-5 h-5 mr-2 text-indigo-600" />
                             Document Information
                           </h3>
                           <div className="grid grid-cols-2 gap-4">
-                            {drugDetails.metadata?.document_type && (
+                            {entityDetails.metadata?.document_type && (
                               <div>
                                 <p className="text-sm font-medium text-gray-500">Document Type</p>
-                                <p className="text-gray-900">{drugDetails.metadata.document_type}</p>
+                                <p className="text-gray-900">{entityDetails.metadata.document_type}</p>
                               </div>
                             )}
-                            {drugDetails.page_info && (
+                            {entityDetails.page_info && (
                               <div>
                                 <p className="text-sm font-medium text-gray-500">Total Pages</p>
-                                <p className="text-gray-900">{drugDetails.page_info.total_pages}</p>
+                                <p className="text-gray-900">{entityDetails.page_info.total_pages}</p>
                               </div>
                             )}
-                            {drugDetails.page_info && (
+                            {entityDetails.page_info && (
                               <div>
                                 <p className="text-sm font-medium text-gray-500">Content Chunks</p>
-                                <p className="text-gray-900">{drugDetails.page_info.total_chunks}</p>
+                                <p className="text-gray-900">{entityDetails.page_info.total_chunks}</p>
                               </div>
                             )}
-                            {drugDetails.page_info && (
+                            {entityDetails.page_info && (
                               <div>
                                 <p className="text-sm font-medium text-gray-500">Content Tokens</p>
-                                <p className="text-gray-900">{drugDetails.page_info.total_tokens.toLocaleString()}</p>
+                                <p className="text-gray-900">{entityDetails.page_info.total_tokens.toLocaleString()}</p>
                               </div>
                             )}
                           </div>
@@ -834,7 +834,7 @@ ${selectedDrug?.drug_name} works through [specific mechanism] to provide therape
                 </>
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-600">Failed to load drug details. Please try again.</p>
+                  <p className="text-gray-600">Failed to load entity details. Please try again.</p>
                 </div>
               )}
             </div>

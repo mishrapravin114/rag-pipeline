@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { apiService, type Drug } from "../services/api"
+import { apiService, type Entity } from "../services/api"
 
 export function useBookmarks() {
-  const [bookmarks, setBookmarks] = useState<Drug[]>([])
+  const [bookmarks, setBookmarks] = useState<Entity[]>([])
   const [loading, setLoading] = useState(false)
 
   const loadBookmarks = useCallback(async () => {
@@ -19,16 +19,16 @@ export function useBookmarks() {
     }
   }, [])
 
-  const toggleBookmark = useCallback(async (drugId: string) => {
+  const toggleBookmark = useCallback(async (entityId: string) => {
     try {
-      const result = await apiService.toggleBookmark(drugId)
+      const result = await apiService.toggleBookmark(entityId)
       if (result.bookmarked) {
         // Add to bookmarks if not already there
-        const drug = await apiService.getDrug(drugId)
-        setBookmarks((prev) => [...prev, { ...drug, isBookmarked: true }])
+        const entity = await apiService.getEntity(entityId)
+        setBookmarks((prev) => [...prev, { ...entity, isBookmarked: true }])
       } else {
         // Remove from bookmarks
-        setBookmarks((prev) => prev.filter((drug) => drug.id !== drugId))
+        setBookmarks((prev) => prev.filter((entity) => entity.id !== entityId))
       }
       return result.bookmarked
     } catch (error) {

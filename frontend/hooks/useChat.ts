@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react"
 import { apiService, type ChatMessage } from "../services/api"
 
-export function useChat(drugId?: string) {
+export function useChat(entityId?: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -17,7 +17,7 @@ export function useChat(drugId?: string) {
         content,
         role: "user",
         timestamp: new Date(),
-        drugId,
+        entityId,
       }
 
       setMessages((prev) => [...prev, userMessage])
@@ -39,7 +39,7 @@ export function useChat(drugId?: string) {
           content: response.content,
           role: "assistant",
           timestamp: new Date(response.timestamp),
-          drugId,
+          entityId,
           contentType: "html",
           sourceInfo: response.source_info,
           searchResults: response.search_results,
@@ -53,17 +53,17 @@ export function useChat(drugId?: string) {
         setLoading(false)
       }
     },
-    [drugId],
+    [entityId],
   )
 
   const loadHistory = useCallback(async () => {
     try {
-      const history = await apiService.getChatHistory(drugId)
+      const history = await apiService.getChatHistory(entityId)
       setMessages(history)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load chat history")
     }
-  }, [drugId])
+  }, [entityId])
 
   return {
     messages,
