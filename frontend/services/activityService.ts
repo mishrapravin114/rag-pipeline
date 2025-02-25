@@ -4,7 +4,7 @@ export interface ActivityData {
   type: 'search' | 'view' | 'chat' | 'download' | 'file_view';
   text: string;
   query?: string;
-  drug_name?: string;
+  entity_name?: string;
   results_count?: number;
   source_file_id?: number;
   timestamp: string;
@@ -91,49 +91,49 @@ class ActivityService {
   }
 
   // Track specific activity types
-  trackSearch(query: string, drugName?: string, resultsCount?: number) {
+  trackSearch(query: string, entityName?: string, resultsCount?: number) {
     return this.saveActivity({
       type: 'search',
-      text: drugName ? `Searched for "${query}" in ${drugName}` : `Searched for "${query}"`,
+      text: entityName ? `Searched for "${query}" in ${entityName}` : `Searched for "${query}"`,
       query,
-      drug_name: drugName,
+      entity_name: entityName,
       results_count: resultsCount
     });
   }
 
-  trackView(drugName: string, sourceFileId?: number) {
+  trackView(entityName: string, sourceFileId?: number) {
     return this.saveActivity({
       type: 'view',
-      text: `Viewed metadata for ${drugName}`,
-      drug_name: drugName,
+      text: `Viewed metadata for ${entityName}`,
+      entity_name: entityName,
       source_file_id: sourceFileId
     });
   }
 
-  trackChat(drugName: string, sourceFileId?: number, query?: string) {
+  trackChat(entityName: string, sourceFileId?: number, query?: string) {
     return this.saveActivity({
       type: 'chat',
-      text: query ? `Asked about ${drugName}: "${query}"` : `Started chat about ${drugName}`,
-      drug_name: drugName,
+      text: query ? `Asked about ${entityName}: "${query}"` : `Started chat about ${entityName}`,
+      entity_name: entityName,
       source_file_id: sourceFileId,
       query
     });
   }
 
-  trackDownload(drugName: string, sourceFileId?: number) {
+  trackDownload(entityName: string, sourceFileId?: number) {
     return this.saveActivity({
       type: 'download',
-      text: `Downloaded ${drugName}`,
-      drug_name: drugName,
+      text: `Downloaded ${entityName}`,
+      entity_name: entityName,
       source_file_id: sourceFileId
     });
   }
 
-  trackFileView(fileName: string, drugName?: string, sourceFileId?: number) {
+  trackFileView(fileName: string, entityName?: string, sourceFileId?: number) {
     return this.saveActivity({
       type: 'file_view',
       text: `Viewed document: ${fileName}`,
-      drug_name: drugName,
+      entity_name: entityName,
       source_file_id: sourceFileId
     });
   }

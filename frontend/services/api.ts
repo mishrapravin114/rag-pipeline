@@ -1,5 +1,15 @@
 import { API_BASE_URL } from '@/config/api'
 
+export interface Entity {
+  id: string;
+  name: string;
+  type?: string;
+  description?: string;
+  relevance_score?: number;
+  last_updated?: string;
+  // Add other entity properties as needed
+}
+
 export interface SourceDocument {
   id: string
   source: string
@@ -17,7 +27,7 @@ export interface EnhancedSourceDocument {
   citation_number: number
   relevance_score: number
   page_number?: number
-  drug_name?: string
+  entity_name?: string
   metadata?: {
     original_content?: string
     file_url?: string
@@ -49,16 +59,25 @@ export interface EnhancedQueryResponse extends QueryResponse {
   }
 }
 
-export interface Drug {
+export interface Entity {
   id: string
   source_file_id?: number
   name: string
-  brand: string
-  therapeuticArea: string
+  brand?: string
+  source?: string
+  therapeuticArea?: string
+  category?: string
   description: string
   timeline: TimelineEvent[]
-  sections: DrugSection[]
+  sections: EntitySection[]
   isBookmarked?: boolean
+}
+
+export interface EntitySection {
+  id?: string
+  type: string
+  title: string
+  content: string
 }
 
 export interface TimelineEvent {
@@ -67,20 +86,13 @@ export interface TimelineEvent {
   phase: string
 }
 
-export interface DrugSection {
-  id: string
-  title: string
-  content: string
-  type: "overview" | "mechanism" | "trials" | "safety" | "regulatory"
-}
-
 export interface ChatMessage {
   id: string
   content: string
   role: "user" | "assistant"
   timestamp: Date
-  drugId?: string
-  drugIds?: string[]
+  entityId?: string
+  entityIds?: string[]
   contentType?: "markdown" | "html"
   sourceInfo?: {
     type: "document_based" | "llm_based" | "error"
@@ -104,7 +116,7 @@ export interface ChatMessage {
     source_file_id: number
     file_name: string
     file_url: string
-    drug_name: string
+    entity_name: string
     us_ma_date?: string
     relevance_score: number
     relevance_comments: string
@@ -115,12 +127,12 @@ export interface ChatMessage {
 }
 
 export interface SearchResult {
-  drugs: Drug[]
+  entities: Entity[]
   total: number
 }
 
-// Enhanced interfaces for drug details
-export interface DrugDetailsSection {
+// Enhanced interfaces for entity details
+export interface EntityDetailsSection {
   id: number
   type: string
   title: string
@@ -128,10 +140,10 @@ export interface DrugDetailsSection {
   order: number
 }
 
-export interface DrugDetails {
+export interface EntityDetails {
   basic_info: {
     id: number
-    drug_name: string
+    entity_name: string
     therapeutic_area?: string
     approval_status: string
     country: string
@@ -144,7 +156,7 @@ export interface DrugDetails {
     pdufa_date?: string
     approval_date?: string
   }
-  sections: DrugDetailsSection[]
+  sections: EntityDetailsSection[]
   page_info?: {
     total_pages: number
     page_numbers: number[]
@@ -166,7 +178,7 @@ export interface DualSearchResult {
   results: Array<{
     id: number
     source_file_id: number
-    drug_name: string
+    entity_name: string
     therapeutic_area: string
     manufacturer: string
     approval_status: string
@@ -191,7 +203,7 @@ export interface SourceFileResponse {
   id: number
   file_name: string
   file_url: string
-  drug_name?: string
+  entity_name?: string
   status: string
   comments?: string
   us_ma_date?: string
@@ -209,7 +221,7 @@ export interface SourceFileResponse {
 export interface SourceFileCreate {
   file_name: string
   file_url: string
-  drug_name?: string
+  entity_name?: string
   comments?: string
   us_ma_date?: string
   status?: string
@@ -219,7 +231,7 @@ export interface SourceFileCreate {
 export interface SourceFileUpdate {
   file_name?: string
   file_url?: string
-  drug_name?: string
+  entity_name?: string
   status?: string
   comments?: string
   us_ma_date?: string
@@ -412,14 +424,14 @@ class ApiService {
     })
   }
 
-  // Get comprehensive drug details
-  async getDrugDetails(drugId: string): Promise<DrugDetails> {
-    return this.request<DrugDetails>(`/api/drugs/${drugId}/details`)
+  // Get comprehensive entity details
+  async getEntityDetails(entityId: string): Promise<EntityDetails> {
+    return this.request<EntityDetails>(`/api/entities/${entityId}/details`)
   }
 
-  // Download drug PDF document
-  async downloadDrugPDF(drugId: string): Promise<Blob> {
-    const response = await fetch(`${API_BASE_URL}/api/documents/download/${drugId}`, {
+  // Download entity PDF document
+  async downloadEntityPDF(entityId: string): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/api/documents/download/${entityId}`, {
       headers: this.getAuthHeaders(),
     })
     
@@ -442,8 +454,8 @@ class ApiService {
     return this.request<Record<string, any>>("/api/search/filters")
   }
 
-  // Search drugs (legacy method for backward compatibility)
-  async searchDrugs(query: string, filters?: { therapeuticArea?: string }): Promise<SearchResult> {
+  // Search entities (legacy method for backward compatibility)
+  async searchEntities(query: string, filters?: { therapeuticArea?: string }): Promise<SearchResult> {
     // Convert to dual search format
     const searchRequest: DualSearchRequest = {
       brand_name: query,
@@ -455,11 +467,11 @@ class ApiService {
     
     // Convert to legacy format
     return {
-      drugs: result.results.map(item => ({
+      entities: result.results.map(item => ({
         id: item.id.toString(),
         source_file_id: item.source_file_id,
-        name: item.drug_name,
-        brand: item.drug_name,
+        name: item.entity_name,
+        brand: item.entity_name,
         therapeuticArea: item.therapeutic_area,
         description: item.therapeutic_area,
         timeline: [],
@@ -470,14 +482,14 @@ class ApiService {
     }
   }
 
-  // Get drug details (legacy method)
-  async getDrug(id: string): Promise<Drug> {
-    const details = await this.getDrugDetails(id)
+  // Get entity details (legacy method)
+  async getEntity(id: string): Promise<Entity> {
+    const details = await this.getEntityDetails(id)
     
     return {
       id: details.basic_info.id.toString(),
-      name: details.basic_info.drug_name,
-      brand: details.basic_info.drug_name,
+      name: details.basic_info.entity_name,
+      brand: details.basic_info.entity_name,
       therapeuticArea: details.basic_info.therapeutic_area || '',
       description: details.basic_info.therapeutic_area || '',
       timeline: [],
@@ -515,7 +527,7 @@ class ApiService {
   }
 
   async getDashboardData(): Promise<{
-    total_drugs: number;
+    total_entities: number;
     total_manufacturers: number;
     recent_approvals: number;
     total_searches: number;
@@ -524,15 +536,15 @@ class ApiService {
       processed_files: number;
       total_metadata_entries: number;
       recent_searches_7d: number;
-      trending_drugs: Array<{ drug_name: string; search_count: number }>;
-      top_drugs: Array<{ name: string; count: number }>;
+      trending_entities: Array<{ entity_name: string; search_count: number }>;
+      top_entities: Array<{ name: string; count: number }>;
       top_manufacturers: Array<{ name: string; count: number }>;
       recent_activity?: Array<{
         id: string;
         type: string;
         timestamp: string;
         query?: string;
-        drugName?: string;
+        entityName?: string;
       }>;
     };
     last_updated: string;
@@ -544,17 +556,17 @@ class ApiService {
       
       // Map the response to expected format
       return {
-        total_drugs: response.total_drugs || 0,
+        total_entities: response.total_entities || 0,
         total_manufacturers: response.total_manufacturers || response.manufacturers_count || 0,
         recent_approvals: response.recent_approvals || 0,
         total_searches: response.total_searches || 0,
         additional_stats: {
-          total_source_files: response.total_source_files || response.total_drugs || 0,
+          total_source_files: response.total_source_files || response.total_entities || 0,
           processed_files: response.processed_files || 0,
           total_metadata_entries: response.total_metadata_entries || response.total_sections || 0,
           recent_searches_7d: response.recent_searches_7d || response.recent_activity?.searches_last_7_days || 0,
-          trending_drugs: response.additional_stats?.trending_drugs || response.trending_drugs || [],
-          top_drugs: response.top_drugs || [],
+          trending_entities: response.additional_stats?.trending_entities || response.trending_entities || [],
+          top_entities: response.top_entities || [],
           top_manufacturers: response.top_manufacturers || [],
           recent_activity: response.additional_stats?.recent_activity || response.recent_activities || []
         },
@@ -564,7 +576,7 @@ class ApiService {
       console.warn('Dashboard stats endpoint error:', error)
       // Return default values if endpoint fails
       return {
-        total_drugs: 0,
+        total_entities: 0,
         total_manufacturers: 0,
         recent_approvals: 0,
         total_searches: 0,
@@ -577,9 +589,14 @@ class ApiService {
     return this.request<any>("/api/search/stats")
   }
 
-  // Get trending drugs
-  async getTrendingDrugs(): Promise<Drug[]> {
-    return this.request<Drug[]>("/drugs/trending")
+  // Get trending entities
+  async getTrendingEntities(): Promise<Entity[]> {
+    return this.request<Entity[]>("/entities/trending");
+  }
+
+  // Keep the old method for backward compatibility
+  async getTrendingEntities(): Promise<Entity[]> {
+    return this.getTrendingEntities() as unknown as Promise<Entity[]>;
   }
 
   // Chat with AI
@@ -600,7 +617,7 @@ class ApiService {
       source_file_id: number;
       file_name: string;
       file_url: string;
-      drug_name: string;
+      entity_name: string;
       us_ma_date?: string;
       relevance_score: number;
       relevance_comments: string;
@@ -657,8 +674,8 @@ class ApiService {
 
   async sendChatMessage(requestPayload: { 
     message: string; 
-    drugId?: number; 
-    drugIds?: number[]; 
+    entityId?: number; 
+    entityIds?: number[]; 
     source_file_id?: number; 
     source_file_ids?: number[]; 
     collection_id?: number;
@@ -806,8 +823,8 @@ class ApiService {
         content: data.response,
         role: 'assistant',
         timestamp: new Date(),
-        drugId: data.source_file_id?.toString(),
-        drugIds: data.source_file_ids?.map((id: number) => id.toString()),
+        entityId: data.source_file_id?.toString(),
+        entityIds: data.source_file_ids?.map((id: number) => id.toString()),
         contentType: data.content_type || "markdown",
         source_documents: data.source_documents || [],
         // Enhanced fields with fallbacks
@@ -840,20 +857,20 @@ class ApiService {
   }
 
   // Get chat history
-  async getChatHistory(drugId?: string): Promise<ChatMessage[]> {
-    const params = drugId ? `?drugId=${drugId}` : ""
+  async getChatHistory(entityId?: string): Promise<ChatMessage[]> {
+    const params = entityId ? `?entityId=${entityId}` : ""
     return this.request<ChatMessage[]>(`/api/chat/history${params}`)
   }
 
   // Bookmark management
-  async toggleBookmark(drugId: string): Promise<{ bookmarked: boolean }> {
-    return this.request<{ bookmarked: boolean }>(`/bookmarks/${drugId}`, {
+  async toggleBookmark(entityId: string): Promise<{ bookmarked: boolean }> {
+    return this.request<{ bookmarked: boolean }>(`/bookmarks/${entityId}`, {
       method: "POST",
     })
   }
 
-  async getBookmarks(): Promise<Drug[]> {
-    return this.request<Drug[]>("/bookmarks")
+  async getBookmarks(): Promise<Entity[]> {
+    return this.request<Entity[]>("/bookmarks")
   }
 
   // Search history
@@ -993,7 +1010,7 @@ class ApiService {
     processing_files: Array<{
       id: number;
       file_name: string;
-      drug_name?: string;
+      entity_name?: string;
     }>;
     total_requested: number;
     total_queued: number;
@@ -1004,7 +1021,7 @@ class ApiService {
       processing_files: Array<{
         id: number;
         file_name: string;
-        drug_name?: string;
+        entity_name?: string;
       }>;
       total_requested: number;
       total_queued: number;
@@ -1038,7 +1055,7 @@ class ApiService {
   // Search documents
   async searchDocuments(
     query: string, 
-    drugName?: string, 
+    entityName?: string, 
     collectionId?: number, 
     sourceFileId?: number,
     page: number = 1,
@@ -1049,7 +1066,7 @@ class ApiService {
       source_file_id: number;
       file_name: string;
       file_url: string;
-      drug_name: string;
+      entity_name: string;
       us_ma_date?: string;
       relevance_score: number;
       relevance_comments: string;
@@ -1070,7 +1087,7 @@ class ApiService {
       method: "POST",
       body: JSON.stringify({ 
         query, 
-        drug_name: drugName, 
+        entity_name: entityName, 
         collection_id: collectionId,
         source_file_id: sourceFileId,
         page,
@@ -1079,13 +1096,13 @@ class ApiService {
     });
   }
 
-  // Get unique drug names for filter
-  async getUniqueDrugNames(collectionId?: number): Promise<{
+  // Get unique entity names for filter
+  async getUniqueEntityNames(collectionId?: number): Promise<{
     success: boolean;
-    drug_names: string[];
+    entity_names: string[];
   }> {
     const params = collectionId ? `?collection_id=${collectionId}` : '';
-    return this.request<any>(`/api/chat/drug-names${params}`);
+    return this.request<any>(`/api/chat/entity-names${params}`);
   }
 
   // ============================
@@ -1148,7 +1165,7 @@ class ApiService {
       id: number
       file_name: string
       file_url: string
-      drug_name?: string
+      entity_name?: string
       status: string
     }
     documents: Array<{
@@ -1165,7 +1182,7 @@ class ApiService {
         id: number
         file_name: string
         file_url: string
-        drug_name?: string
+        entity_name?: string
         status: string
       }
       documents: Array<{
@@ -1183,7 +1200,7 @@ class ApiService {
   async bulkUploadSourceFiles(items: Array<{
     file_name: string
     file_url: string
-    drug_name?: string
+    entity_name?: string
     comments?: string
     us_ma_date?: string
   }>): Promise<{
@@ -1195,7 +1212,7 @@ class ApiService {
       row: number
       id: number
       file_name: string
-      drug_name?: string
+      entity_name?: string
     }>
     failure_details: Array<{
       row: number
@@ -1212,7 +1229,7 @@ class ApiService {
         row: number
         id: number
         file_name: string
-        drug_name?: string
+        entity_name?: string
       }>
       failure_details: Array<{
         row: number
@@ -1229,7 +1246,7 @@ class ApiService {
   async uploadSourceFile(formData: FormData): Promise<{
     id: number
     file_name: string
-    drug_name?: string
+    entity_name?: string
     status: string
     message: string
   }> {
@@ -1268,7 +1285,7 @@ class ApiService {
   async bulkUploadToCollection(collectionId: number, items: Array<{
     file_name: string
     file_url: string
-    drug_name?: string
+    entity_name?: string
     comments?: string
     us_ma_date?: string
   }>): Promise<{
@@ -1280,7 +1297,7 @@ class ApiService {
       row: number
       id: number
       file_name: string
-      drug_name?: string
+      entity_name?: string
     }>
     failure_details: Array<{
       row: number
@@ -1330,7 +1347,7 @@ class ApiService {
     });
   }
 
-  async getCollectionDrugNames(collectionId: number, options: {
+  async getCollectionEntityNames(collectionId: number, options: {
     search?: string;
     limit?: number;
     offset?: number;
@@ -1338,7 +1355,7 @@ class ApiService {
   } = {}): Promise<{
     collection_id: number;
     collection_name: string;
-    drug_names: any[];
+    entity_names: any[];
     total_count: number;
     limit: number;
     offset: number;
@@ -1353,7 +1370,7 @@ class ApiService {
     if (options.offset !== undefined) params.append('offset', options.offset.toString());
     if (options.include_counts !== undefined) params.append('include_counts', options.include_counts.toString());
     
-    const url = `/api/collections/${collectionId}/drug-names${params.toString() ? `?${params}` : ''}`;
+    const url = `/api/collections/${collectionId}/entity-names${params.toString() ? `?${params}` : ''}`;
     return this.request<any>(url);
   }
 
@@ -2308,7 +2325,7 @@ class ApiService {
     extraction_files: Array<{
       id: number;
       file_name: string;
-      drug_name?: string;
+      entity_name?: string;
     }>;
     total_requested: number;
     total_queued: number;
@@ -2322,10 +2339,10 @@ class ApiService {
   // Get all metadata for export (JSON and Excel)
   async getMetadataExportData(): Promise<{
     success: boolean;
-    grouped_data: { [drugName: string]: { [usMADate: string]: any } };
+    grouped_data: { [entityName: string]: { [usMADate: string]: any } };
     flat_data: Array<{
       'File URL': string;
-      'Drug Name': string;
+      'Entity Name': string;
       'US MA Date': string;
       'Metadata Name': string;
       'Extracted Value': string;
@@ -2333,25 +2350,25 @@ class ApiService {
       'Extraction Date': string;
     }>;
     total_records: number;
-    total_drugs: number;
+    total_entities: number;
   }> {
     return this.request<any>("/api/metadata-extraction/export-data");
   }
 
-  // Get drug metadata for a specific source file
-  async getDrugMetadata(sourceFileId: number): Promise<{
+  // Get entity metadata for a specific source file
+  async getEntityMetadata(sourceFileId: number): Promise<{
     source_file: {
       id: number;
       file_name: string;
       file_url: string;
-      drug_name: string;
+      entity_name: string;
       status: string;
     };
     metadata: Array<{
       id: number;
       metadata_name: string;
       value: string;
-      drugname: string;
+      entityname: string;
       source_file_id: number;
       file_url: string;
       created_at: string;
@@ -2359,7 +2376,31 @@ class ApiService {
     }>;
     total_count: number;
   }> {
-    return this.request<any>(`/api/drugs/${sourceFileId}/metadata`);
+    return this.request<any>(`/api/entities/${sourceFileId}/metadata`);
+  }
+
+  // Get entity metadata for a specific source file
+  async getEntityMetadata(sourceFileId: number): Promise<{
+    source_file: {
+      id: number;
+      file_name: string;
+      file_url: string;
+      entity_name: string;
+      status: string;
+    };
+    metadata: Array<{
+      id: number;
+      attribute_name: string;
+      value: string;
+      entity_name: string;
+      source_file_id: number;
+      file_url: string;
+      created_at: string;
+      metadata_details?: string;
+    }>;
+    total_count: number;
+  }> {
+    return this.request<any>(`/api/entities/${sourceFileId}/metadata`);
   }
 
   // ============================
@@ -2369,7 +2410,7 @@ class ApiService {
   // Get chat suggestions based on context
   async getChatSuggestions(params: {
     chat_history?: Array<{ role: string; content: string }>;
-    selected_drugs?: string[];
+    selected_entities?: string[];
     last_response?: string;
   }): Promise<{
     suggestions: string[];
@@ -2410,7 +2451,7 @@ class ApiService {
       search_results?: Array<{
         source_file_id: number;
         file_name: string;
-        drug_name: string;
+        entity_name: string;
         relevance_score: number;
       }>;
     }>;
