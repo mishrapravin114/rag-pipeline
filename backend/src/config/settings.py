@@ -1,10 +1,14 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from typing import Optional
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env files (backend/.env first, then root .env)
+backend_dir = Path(__file__).parent.parent.parent
+root_dir = backend_dir.parent
+load_dotenv(backend_dir / ".env")  # Load backend/.env first
+load_dotenv(root_dir / ".env", override=False)  # Then root .env (don't override if already set)
 
 class Settings(BaseSettings):
     # Database
@@ -66,7 +70,7 @@ class Settings(BaseSettings):
         return os.path.join(self.OUTPUT_DIR, "json")
     
     class Config:
-        env_file = ".env"
+        env_file = ".env"  # Will use the one loaded by dotenv above
         env_file_encoding = "utf-8"
         case_sensitive = True
         extra = "ignore"
