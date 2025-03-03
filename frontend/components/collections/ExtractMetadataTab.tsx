@@ -73,7 +73,7 @@ interface MetadataGroup {
 interface Document {
   id: number;
   file_name: string;
-  drug_name?: string;
+  entity_name?: string;
   status: string;
 }
 
@@ -617,8 +617,8 @@ export function ExtractMetadataTab({
                         className="flex-1 cursor-pointer text-sm"
                       >
                         <p className="font-medium">{doc.file_name}</p>
-                        {doc.drug_name && (
-                          <p className="text-xs text-gray-600">{doc.drug_name}</p>
+                        {doc.entity_name && (
+                          <p className="text-xs text-gray-600">{doc.entity_name}</p>
                         )}
                       </label>
                       <Badge variant={doc.status === 'indexed' ? 'secondary' : 'outline'} className="text-xs">

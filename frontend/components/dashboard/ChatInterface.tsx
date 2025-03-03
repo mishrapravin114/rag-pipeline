@@ -13,9 +13,9 @@ interface ChatMessage {
 }
 
 interface ChatInterfaceProps {
-  selectedDrug?: {
+  selectedEntity?: {
     id: string;
-    drug_name: string;
+    entity_name: string;
     indication: string;
     manufacturer: string;
   } | null;
@@ -67,7 +67,7 @@ const formatChatMessage = (content: string, contentType?: string) => {
     });
 };
 
-export function ChatInterface({ selectedDrug, onClose }: ChatInterfaceProps) {
+export function ChatInterface({ selectedEntity, onClose }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -75,17 +75,17 @@ export function ChatInterface({ selectedDrug, onClose }: ChatInterfaceProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Add welcome message when component mounts or drug changes
+    // Add welcome message when component mounts or entity changes
     const welcomeMessage: ChatMessage = {
       id: Date.now().toString(),
       type: "assistant",
-      content: selectedDrug 
-        ? `Hello! I'm here to help you learn about ${selectedDrug.drug_name}. You can ask me questions about its indication, dosage, efficacy, safety profile, or any other aspect of this drug. What would you like to know?`
-        : "Hello! I'm your FDA document assistant. You can ask me questions about any of the drugs in our database, their indications, safety profiles, dosing, or clinical trial data. How can I help you today?",
+      content: selectedEntity 
+        ? `Hello! I'm here to help you learn about ${selectedEntity.entity_name}. You can ask me questions about its indication, dosage, efficacy, safety profile, or any other aspect of this entity. What would you like to know?`
+        : "Hello! I'm your FDA document assistant. You can ask me questions about any of the entities in our database, their indications, safety profiles, dosing, or clinical trial data. How can I help you today?",
       timestamp: new Date()
     };
     setMessages([welcomeMessage]);
-  }, [selectedDrug]);
+  }, [selectedEntity]);
 
   useEffect(() => {
     scrollToBottom();
@@ -159,10 +159,10 @@ export function ChatInterface({ selectedDrug, onClose }: ChatInterfaceProps) {
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-xl bg-gradient-to-r from-blue-800 to-indigo-700 bg-clip-text text-transparent">
-              {selectedDrug ? `Chat about ${selectedDrug.drug_name}` : "FDA Document Assistant"}
+              {selectedEntity ? `Chat about ${selectedEntity.entity_name}` : "FDA Document Assistant"}
             </h3>
             <p className="text-sm text-blue-600/70 font-medium">
-              {selectedDrug ? "Ask questions about this drug" : "Ask questions about any FDA document"}
+              {selectedEntity ? "Ask questions about this entity" : "Ask questions about any FDA document"}
             </p>
           </div>
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-100/50 rounded-full">
@@ -276,7 +276,7 @@ export function ChatInterface({ selectedDrug, onClose }: ChatInterfaceProps) {
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-              placeholder={selectedDrug ? `Ask about ${selectedDrug.drug_name}...` : "Ask about FDA documents..."}
+              placeholder={selectedEntity ? `Ask about ${selectedEntity.entity_name}...` : "Ask about FDA documents..."}
             disabled={isLoading}
               className="w-full px-5 py-4 pr-12 bg-white/80 backdrop-blur-sm border border-blue-200/50 rounded-2xl 
                 focus:outline-none focus:ring-3 focus:ring-blue-500/30 focus:border-blue-400

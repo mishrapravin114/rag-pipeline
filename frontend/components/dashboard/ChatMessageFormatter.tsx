@@ -137,7 +137,7 @@ export function ChatMessageFormatter({ content }: ChatMessageFormatterProps) {
     enhanced = enhanced.replace(/^(Dosage|Dosing|Administration):?$/gim, '**Dosage and Administration**');
     enhanced = enhanced.replace(/^(Warning[s]?|Precaution[s]?):?$/gim, '**Warnings and Precautions**');
     enhanced = enhanced.replace(/^(Adverse|Side Effect[s]?):?$/gim, '**Adverse Reactions**');
-    enhanced = enhanced.replace(/^(Interaction[s]?|Drug Interaction[s]?):?$/gim, '**Drug Interactions**');
+    enhanced = enhanced.replace(/^(Interaction[s]?|Entity Interaction[s]?):?$/gim, '**Entity Interactions**');
     enhanced = enhanced.replace(/^(Contraindication[s]?):?$/gim, '**Contraindications**');
     enhanced = enhanced.replace(/^(Clinical|Study|Studies|Trial[s]?):?$/gim, '**Clinical Studies**');
     
