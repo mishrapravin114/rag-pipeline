@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from database import (
     SourceFiles, SessionLocal, create_tables,
     FDAExtractionResults, DocumentData, ChatHistory,
-    SearchHistory, TrendingSearches, DrugSections
+    SearchHistory, TrendingSearches, EntitySections
 )
 
 # Set up logging
@@ -187,7 +187,7 @@ def reset_database():
             (ChatHistory, "ChatHistory"),
             (SearchHistory, "SearchHistory"),
             (TrendingSearches, "TrendingSearches"),
-            (DrugSections, "DrugSections")
+            (EntitySections, "EntitySections")
         ]
         
         for table_class, table_name in tables_to_clear:
@@ -235,58 +235,58 @@ def reset_database():
         db.close()
 
 
-def seed_drug_entries():
-    """Seed specific drug entries with Pending status"""
+def seed_entitie_entries():
+    """Seed specific entity entries with Pending status"""
     
     # Create tables if they don't exist
     create_tables()
     
-    drug_entries = [
+    entitie_entries = [
         # Augtyro : Repotrectinib
         {
             "file_name": "augtyro_original_approved_218213s000lbl.pdf",
-            "file_url": "https://www.accessdata.fda.gov/drugsatfda_docs/label/2023/218213s000lbl.pdf",
+            "file_url": "https://www.accessdata.fda.gov/entitiesatfda_docs/label/2023/218213s000lbl.pdf",
             "comments": "Category: Original Approval - Augtyro (Repotrectinib)"
         },
         {
             "file_name": "augtyro_efficacy_approved_218213s001lbl.pdf",
-            "file_url": "https://www.accessdata.fda.gov/drugsatfda_docs/label/2024/218213s001lbl.pdf",
+            "file_url": "https://www.accessdata.fda.gov/entitiesatfda_docs/label/2024/218213s001lbl.pdf",
             "comments": "Category: Efficacy Approval - Augtyro (Repotrectinib)"
         },
         
         # Krazati : Adagrasib
         {
             "file_name": "krazati_original_approved_216340Orig1s000Corrected_lbl.pdf",
-            "file_url": "http://www.accessdata.fda.gov/drugsatfda_docs/label/2022/216340Orig1s000Corrected_lbl.pdf",
+            "file_url": "http://www.accessdata.fda.gov/entitiesatfda_docs/label/2022/216340Orig1s000Corrected_lbl.pdf",
             "comments": "Category: Original Approval - Krazati (Adagrasib)"
         },
         {
             "file_name": "krazati_efficacy_approved_216340s005lbl.pdf",
-            "file_url": "https://www.accessdata.fda.gov/drugsatfda_docs/label/2024/216340s005lbl.pdf",
+            "file_url": "https://www.accessdata.fda.gov/entitiesatfda_docs/label/2024/216340s005lbl.pdf",
             "comments": "Category: Efficacy Approval - Krazati (Adagrasib)"
         },
         
         # Jemperli : Dostarlimab
         {
             "file_name": "jemperli_original_approved_761174s000lbl.pdf",
-            "file_url": "http://www.accessdata.fda.gov/drugsatfda_docs/label/2021/761174s000lbl.pdf",
+            "file_url": "http://www.accessdata.fda.gov/entitiesatfda_docs/label/2021/761174s000lbl.pdf",
             "comments": "Category: Original Approval - Jemperli (Dostarlimab)"
         },
         {
             "file_name": "jemperli_efficacy_approved_761174s009lbl.pdf",
-            "file_url": "http://www.accessdata.fda.gov/drugsatfda_docs/label/2024/761174s009lbl.pdf",
+            "file_url": "http://www.accessdata.fda.gov/entitiesatfda_docs/label/2024/761174s009lbl.pdf",
             "comments": "Category: Efficacy Approval - Jemperli (Dostarlimab)"
         },
         
         # Gavreto : Pralsetinib
         {
             "file_name": "gavreto_original_approved_213721s000lbl.pdf",
-            "file_url": "http://www.accessdata.fda.gov/drugsatfda_docs/label/2020/213721s000lbl.pdf",
+            "file_url": "http://www.accessdata.fda.gov/entitiesatfda_docs/label/2020/213721s000lbl.pdf",
             "comments": "Category: Original Approval - Gavreto (Pralsetinib)"
         },
         {
             "file_name": "gavreto_efficacy_approved_213721s009lbl.pdf",
-            "file_url": "http://www.accessdata.fda.gov/drugsatfda_docs/label/2023/213721s009lbl.pdf",
+            "file_url": "http://www.accessdata.fda.gov/entitiesatfda_docs/label/2023/213721s009lbl.pdf",
             "comments": "Category: Efficacy Approval - Gavreto (Pralsetinib)"
         }
     ]
@@ -297,7 +297,7 @@ def seed_drug_entries():
     error_count = 0
     
     try:
-        for entry in drug_entries:
+        for entry in entitie_entries:
             try:
                 # Check if file already exists
                 existing_file = db.query(SourceFiles).filter(
@@ -318,7 +318,7 @@ def seed_drug_entries():
                 )
                 db.add(source_file)
                 added_count += 1
-                logger.info(f"Added new drug entry: {entry['file_name']}")
+                logger.info(f"Added new entity entry: {entry['file_name']}")
                 
             except Exception as e:
                 logger.error(f"Error processing entry {entry['file_name']}: {e}")
@@ -331,7 +331,7 @@ def seed_drug_entries():
         logger.info("="*80)
         logger.info("DRUG ENTRIES SEEDING SUMMARY")
         logger.info("="*80)
-        logger.info(f"Total entries processed: {len(drug_entries)}")
+        logger.info(f"Total entries processed: {len(entitie_entries)}")
         logger.info(f"Files added: {added_count}")
         logger.info(f"Files skipped (already exist): {skipped_count}")
         logger.info(f"Errors: {error_count}")
@@ -388,9 +388,9 @@ def main():
                 logger.info(df.head(10).to_string(index=False))
                 logger.info(f"\nTotal rows: {len(df)}")
                 
-        elif command == "seed-drugs":
-            # Seed specific drug entries
-            seed_drug_entries()
+        elif command == "seed-entities":
+            # Seed specific entity entries
+            seed_entitie_entries()
             
         elif command == "reset":
             # Reset database
@@ -406,7 +406,7 @@ def main():
             print("  python seed_data.py list              - List seeded files")
             print("  python seed_data.py clear             - Clear seeded files")
             print("  python seed_data.py preview           - Preview Excel data")
-            print("  python seed_data.py seed-drugs        - Seed specific drug entries")
+            print("  python seed_data.py seed-entities        - Seed specific entity entries")
             print("  python seed_data.py reset             - Reset database (clear all except SourceFiles, set all to PENDING)")
     else:
         print("Available commands:")
@@ -414,7 +414,7 @@ def main():
         print("  python seed_data.py list              - List all seeded files")
         print("  python seed_data.py clear             - Clear all seeded files")
         print("  python seed_data.py preview           - Preview Excel data without seeding")
-        print("  python seed_data.py seed-drugs        - Seed specific drug entries")
+        print("  python seed_data.py seed-entities        - Seed specific entity entries")
         print("  python seed_data.py reset             - Reset database (clear all except SourceFiles, set all to PENDING)")
         print("")
         print("Options:")
