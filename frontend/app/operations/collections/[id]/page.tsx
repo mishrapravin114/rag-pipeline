@@ -1,3 +1,4 @@
+// Minor update
 "use client";
 
 // Declare global types for Google APIs
