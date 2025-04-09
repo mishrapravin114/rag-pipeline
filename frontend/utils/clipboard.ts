@@ -1,3 +1,4 @@
+// Minor update
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
     // Modern way using Clipboard API
