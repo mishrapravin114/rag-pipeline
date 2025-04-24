@@ -1,3 +1,4 @@
+// Minor update
 export interface MetadataGroup {
   id: number;
   name: string;
