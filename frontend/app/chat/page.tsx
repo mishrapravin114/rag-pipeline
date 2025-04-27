@@ -1,3 +1,4 @@
+// Minor update
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from 'react';
