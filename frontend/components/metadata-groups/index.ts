@@ -1,4 +1,5 @@
 // Minor update
+// Minor update
 export { ConfigurationList } from './ConfigurationList';
 export { MultiGroupAssignmentModal } from './MultiGroupAssignmentModal';
 export { BulkOperationsToolbar } from './BulkOperationsToolbar';
