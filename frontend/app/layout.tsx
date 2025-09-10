@@ -1,4 +1,5 @@
 // Minor update
+// Minor update
 import type { Metadata } from 'next'
 import './globals.css'
 import { AppLayout } from '@/components/Navigation/AppLayout'
