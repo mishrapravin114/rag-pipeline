@@ -25,14 +25,14 @@ logger = logging.getLogger(__name__)
 # Simple SourceDocument class for document metadata
 class SourceDocument:
     def __init__(self, id, filename, snippet, citation_number, relevance_score, 
-                 page_number=None, entity_name=None, used_in_response=True, metadata=None):
+                 page_number=None, drug_name=None, used_in_response=True, metadata=None):
         self.id = id
         self.filename = filename
         self.snippet = snippet
         self.citation_number = citation_number
         self.relevance_score = relevance_score
         self.page_number = page_number
-        self.entity_name = entity_name
+        self.drug_name = drug_name
         self.used_in_response = used_in_response
         self.metadata = metadata or {}
 
@@ -167,7 +167,7 @@ async def _convert_response_to_html_unified(text: str, query: str) -> str:
 # Pydantic models for request/response
 class SearchDocumentsRequest(BaseModel):
     query: str
-    entity_name: Optional[str] = None
+    drug_name: Optional[str] = None
     collection_id: Optional[int] = None
     source_file_id: Optional[int] = None  # For document-specific search
 
@@ -210,7 +210,7 @@ class AdvancedSearchRequest(BaseModel):
 
 class SuggestionsRequest(BaseModel):
     chat_history: List[Dict[str, Any]] = []
-    selected_entities: List[Any] = []  # Can be list of strings or list of dicts
+    selected_drugs: List[Any] = []  # Can be list of strings or list of dicts
     last_response: str = ""
 
 class EnhancedSourceDocumentResponse(BaseModel):
@@ -221,7 +221,7 @@ class EnhancedSourceDocumentResponse(BaseModel):
     citation_number: int
     relevance_score: float
     page_number: Optional[int] = None
-    entity_name: Optional[str] = None
+    drug_name: Optional[str] = None
 
 class QueryMultipleEnhancedResponse(BaseModel):
     """Enhanced response model with citations and metadata"""
@@ -251,7 +251,7 @@ class DocumentResponse(BaseModel):
     source_file_id: int
     file_name: str
     file_url: Optional[str] = None
-    entity_name: Optional[str] = None
+    drug_name: Optional[str] = None
     manufacturer: Optional[str] = None
     document_type: Optional[str] = None
     approval_date: Optional[str] = None
@@ -264,7 +264,7 @@ class QueryResponse(BaseModel):
     source_file_id: int
     file_name: str
     file_url: Optional[str]
-    entity_name: Optional[str]
+    drug_name: Optional[str]
     user_query: str
     response: str
     chat_id: int
@@ -276,13 +276,13 @@ async def search_documents(
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Search FDA documents by entity name with SQL first, then vector search fallback."""
+    """Search FDA documents by drug name with SQL first, then vector search fallback."""
     try:
         # Perform search with user_id for history tracking
         result = await FDAChatManagementService.search_fda_documents(
             search_query=request.query,
             user_id=current_user.id,
-            entity_name=request.entity_name,
+            drug_name=request.drug_name,
             collection_id=request.collection_id,
             source_file_id=request.source_file_id,
             db=db
@@ -619,7 +619,7 @@ async def _format_response(
             citation_number=i,
             relevance_score=doc.metadata.get('relevance_score', 0.0),
             page_number=doc.metadata.get('page_number'),
-            entity_name=doc.metadata.get('entity_name'),
+            drug_name=doc.metadata.get('drug_name'),
             used_in_response=True,
             metadata={
                 'original_content': doc.metadata.get('original_content'),
@@ -644,7 +644,7 @@ async def _format_response(
                 'citation_number': doc.citation_number,
                 'relevance_score': doc.relevance_score,
                 'page_number': doc.page_number,
-                'entity_name': doc.entity_name,
+                'drug_name': doc.drug_name,
                 'used_in_response': doc.used_in_response,
                 'metadata': doc.metadata
             }
@@ -758,8 +758,8 @@ async def query_multiple_documents(
         enhanced_query = await _enhance_query(request.query)
         logger.info(f"Enhanced query from '{request.query}' to '{enhanced_query}'")
 
-        from utils.entity_file_matcher import EntityFileMatcher
-        relevant_files = await EntityFileMatcher.extract_relevant_files_for_query(
+        from utils.drug_file_matcher import DrugFileMatcher
+        relevant_files = await DrugFileMatcher.extract_relevant_files_for_query(
             enhanced_query,
             source_file_ids=request.source_file_ids,    
             db=db
@@ -973,13 +973,13 @@ Response (in English):"""
                 )
                 logger.info(f"Enhanced query from '{request.query}' to '{enhanced_query}'")
         
-        # Import the entity file matcher
-        from utils.entity_file_matcher import EntityFileMatcher
+        # Import the drug file matcher
+        from utils.drug_file_matcher import DrugFileMatcher
         
         # Extract relevant file names using LLM for document-based query
         doc_file_name_filter = None
         try:
-            relevant_files = await EntityFileMatcher.extract_relevant_files_for_query(
+            relevant_files = await DrugFileMatcher.extract_relevant_files_for_query(
                 enhanced_query,
                 source_file_ids=request.source_file_ids,
                 db=db
@@ -1170,7 +1170,7 @@ Response (in English):"""
                             'citation_number': src.citation_number,
                             'relevance_score': src.relevance_score,
                             'page_number': src.page_number,
-                            'entity_name': src.entity_name,
+                            'drug_name': src.drug_name,
                             'used_in_response': src.used_in_response,
                             'metadata': src.metadata
                         }
@@ -1202,7 +1202,7 @@ Response (in English):"""
                         'citation_number': i,
                         'relevance_score': doc.metadata.get('relevance_score', 0.0),
                         'page_number': doc.metadata.get('page_number'),
-                        'entity_name': doc.metadata.get('entity_name'),
+                        'drug_name': doc.metadata.get('drug_name'),
                         'used_in_response': True,
                         'metadata': {
                             'original_content': doc.metadata.get('original_content'),
@@ -1420,18 +1420,18 @@ async def get_filter_options(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/entity-names")
-async def get_unique_entitie_names(
-    collection_id: Optional[int] = Query(None, description="Filter entity names by collection"),
+@router.get("/drug-names")
+async def get_unique_drug_names(
+    collection_id: Optional[int] = Query(None, description="Filter drug names by collection"),
     current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get all unique entity names from SourceFiles for filter dropdown."""
+    """Get all unique drug names from SourceFiles for filter dropdown."""
     try:
-        entity_names = FDAChatManagementService.get_unique_entitie_names(db, collection_id)
+        drug_names = FDAChatManagementService.get_unique_drug_names(db, collection_id)
         return {
             "success": True,
-            "entity_names": entity_names
+            "drug_names": drug_names
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1461,30 +1461,30 @@ async def generate_suggestions(
     """Generate context-aware suggestions based on chat history."""
     try:
         chat_history = request.chat_history
-        selected_entities = request.selected_entities
+        selected_drugs = request.selected_drugs
         last_response = request.last_response
         
         # Validate input
         if not isinstance(chat_history, list):
             chat_history = []
-        if not isinstance(selected_entities, list):
-            selected_entities = []
+        if not isinstance(selected_drugs, list):
+            selected_drugs = []
         
-        # Normalize selected_entities format
+        # Normalize selected_drugs format
         # Handle both string array and dict array formats
-        normalized_entities = []
-        for entity in selected_entities:
-            if isinstance(entity, str):
+        normalized_drugs = []
+        for drug in selected_drugs:
+            if isinstance(drug, str):
                 # If it's a string, convert to dict format
-                normalized_entities.append({"entity_name": entity})
-            elif isinstance(entity, dict) and "entity_name" in entity:
-                # If it's already a dict with entity_name, use as is
-                normalized_entities.append(entity)
+                normalized_drugs.append({"drug_name": drug})
+            elif isinstance(drug, dict) and "drug_name" in drug:
+                # If it's already a dict with drug_name, use as is
+                normalized_drugs.append(drug)
             # Skip invalid formats
         
-        selected_entities = normalized_entities
+        selected_drugs = normalized_drugs
         
-        logger.info(f"Generating suggestions for chat history length: {len(chat_history)}, entities: {len(selected_entities)}")
+        logger.info(f"Generating suggestions for chat history length: {len(chat_history)}, drugs: {len(selected_drugs)}")
         
         suggestions = []
         suggestion_type = "rule-based"
@@ -1495,7 +1495,7 @@ async def generate_suggestions(
                 logger.info("Attempting LLM-based suggestions")
                 suggestions = FDAChatManagementService.generate_llm_suggestions(
                     chat_history=chat_history,
-                    selected_entities=selected_entities,
+                    selected_drugs=selected_drugs,
                     db=db
                 )
                 if suggestions:
@@ -1509,7 +1509,7 @@ async def generate_suggestions(
             try:
                 suggestions = FDAChatManagementService.generate_smart_suggestions(
                     chat_history=chat_history,
-                    selected_entities=selected_entities,
+                    selected_drugs=selected_drugs,
                     last_response=last_response,
                     db=db
                 )
@@ -1520,8 +1520,8 @@ async def generate_suggestions(
                     "What are the main side effects?",
                     "What is the recommended dosage?",
                     "What are the contraindications?",
-                    "What are the entity interactions?",
-                    "Tell me more about this entity"
+                    "What are the drug interactions?",
+                    "Tell me more about this drug"
                 ]
         
         # Ensure we always have suggestions
@@ -1530,8 +1530,8 @@ async def generate_suggestions(
                 "What are the main side effects?",
                 "What is the recommended dosage?",
                 "What are the contraindications?",
-                "What are the entity interactions?",
-                "Tell me more about this entity"
+                "What are the drug interactions?",
+                "Tell me more about this drug"
             ]
         
         logger.info(f"Returning {len(suggestions)} suggestions of type: {suggestion_type}")
@@ -1548,8 +1548,8 @@ async def generate_suggestions(
                 "What are the main side effects?",
                 "What is the recommended dosage?",
                 "What are the contraindications?",
-                "What are the entity interactions?",
-                "Tell me more about this entity"
+                "What are the drug interactions?",
+                "Tell me more about this drug"
             ],
             "type": "fallback"
         }
@@ -1702,7 +1702,7 @@ async def unified_chat(
         if relevant_docs:
             logger.info("📄 TOP RELEVANT DOCUMENTS:")
             for i, doc in enumerate(relevant_docs[:3], 1):
-                logger.info(f"   {i}. {doc.get('entity_name', 'Unknown')} - Score: {doc.get('relevance_score', 0):.1f}%")
+                logger.info(f"   {i}. {doc.get('drug_name', 'Unknown')} - Score: {doc.get('relevance_score', 0):.1f}%")
                 logger.info(f"      File: {doc.get('file_name', 'Unknown')}")
         
         # STEP 4: Generate response based on relevance
@@ -1967,7 +1967,7 @@ async def _generate_conversation_summary(
         history_text += f"Exchange {i}:\nUser: {user_q}\nAssistant: {response_preview}...\n\n"
     
     prompt = f"""Create a concise summary of this pharmaceutical conversation in 1-2 sentences.
-Focus on the main topics, entities discussed, and key questions asked.
+Focus on the main topics, drugs discussed, and key questions asked.
 
 Conversation:
 {history_text}
@@ -2013,7 +2013,7 @@ async def _enhance_query_with_context_v2(
     
     # Build intent-specific instructions
     intent_instructions = {
-        QueryIntent.NEW_TOPIC: "Focus ONLY on the new query. DO NOT replace entity names, medical terms, or specific entities from the current query with those from previous conversations. The user is asking about something NEW.",
+        QueryIntent.NEW_TOPIC: "Focus ONLY on the new query. DO NOT replace drug names, medical terms, or specific entities from the current query with those from previous conversations. The user is asking about something NEW.",
         QueryIntent.FOLLOW_UP: "Strongly incorporate the previous topic and expand the query with context.",
         QueryIntent.CLARIFICATION: "Reference the specific aspect from the previous response that needs clarification.",
         QueryIntent.OFF_TOPIC: "Treat as a new query but maintain pharmaceutical/medical focus if possible. DO NOT replace entities from the current query."
@@ -2094,10 +2094,10 @@ async def _enhance_query_with_context_v3(
 
             Example Transformations:
             - Input: "side effects"  
-            Output: "Information about the adverse effects, safety profile, and common side effects of the entity."  
+            Output: "Information about the adverse effects, safety profile, and common side effects of the drug."  
 
             - Input: "FDA approval process"  
-            Output: "Detailed information on the FDA regulatory approval process for entities, including phases, requirements, and guidelines."  
+            Output: "Detailed information on the FDA regulatory approval process for drugs, including phases, requirements, and guidelines."  
 
             - Input: "compare ibrutinib and acalabrutinib"  
             Output: "Comparison between ibrutinib and acalabrutinib including mechanism of action, clinical efficacy, safety profile, and FDA-approved indications."  
@@ -2153,7 +2153,7 @@ TASK: Create an enhanced search query that combines the current query with relev
 
 PRIORITY RULES:
 1. PRIORITIZE MOST RECENT context over older conversations
-2. If the current query refers to "it", "this entity", "that medication", etc., replace with the specific entity name from the MOST RECENT conversation
+2. If the current query refers to "it", "this drug", "that medication", etc., replace with the specific drug name from the MOST RECENT conversation
 3. If the current query is a follow-up question, use context from the MOST RECENT relevant conversation
 4. Only use EARLIER context if the MOST RECENT context is not relevant
 5. If the current query is completely new topic, keep it mostly unchanged
@@ -2187,7 +2187,7 @@ async def _generate_enhanced_llm_response(enhanced_query: str) -> str:
         llm = get_llm()
         
         # Simple prompt since enhanced_query already contains conversation context
-        prompt = f"""You are a pharmaceutical AI assistant specializing in FDA-approved entities and medical information.
+        prompt = f"""You are a pharmaceutical AI assistant specializing in FDA-approved drugs and medical information.
 
 RESPONSE STYLE - CRITICAL RULES:
 - NEVER use phrases like "I can help you", "I can provide information", "Let me help", "I'll provide", "I can assist"
@@ -2199,7 +2199,7 @@ RESPONSE STYLE - CRITICAL RULES:
 
 GUIDELINES:
 - Provide accurate, evidence-based pharmaceutical information
-- Focus on FDA-approved entities, clinical data, and medical guidelines
+- Focus on FDA-approved drugs, clinical data, and medical guidelines
 - Use professional, clear language suitable for healthcare contexts
 - Format responses with proper structure (headers, lists, tables when appropriate)
 - If you don't have specific information, clearly state limitations
@@ -2237,7 +2237,7 @@ async def _generate_llm_response_with_history(
         
         # Create prompt with conversation history
         prompt_template = ChatPromptTemplate.from_messages([
-            ("system", """You are a pharmaceutical AI assistant specializing in FDA-approved entities and medical information.
+            ("system", """You are a pharmaceutical AI assistant specializing in FDA-approved drugs and medical information.
 
 RESPONSE STYLE - CRITICAL RULES:
 - NEVER use phrases like "I can help you", "I can provide information", "Let me help", "I'll provide", "I can assist"
@@ -2250,7 +2250,7 @@ RESPONSE STYLE - CRITICAL RULES:
 CONVERSATION GUIDELINES:
 - Maintain conversation context and refer to previous exchanges when relevant
 - Provide accurate, evidence-based pharmaceutical information
-- Focus on FDA-approved entities, clinical data, and medical guidelines
+- Focus on FDA-approved drugs, clinical data, and medical guidelines
 - Use professional, clear language suitable for healthcare contexts
 - Format responses with proper structure (headers, lists, tables when appropriate)
 - If you don't have specific information, clearly state limitations
@@ -2651,16 +2651,16 @@ async def _generate_general_llm_response(
             logger.info("No session context provided - generating response without history")
         
         # First, check if the query is pharmaceutical/medical related
-        classification_prompt = f"""You are an expert classifier. Analyze this user question and determine if it's related to pharmaceuticals, entities, medicine, healthcare, or medical topics.
+        classification_prompt = f"""You are an expert classifier. Analyze this user question and determine if it's related to pharmaceuticals, drugs, medicine, healthcare, or medical topics.
 
 User question: {message}
 
 Respond with only "PHARMACEUTICAL" if the question is about:
-- Entities, medications, pharmaceuticals
+- Drugs, medications, pharmaceuticals
 - Medical conditions, diseases, treatments
 - Healthcare, clinical topics
-- FDA, entity approvals, regulatory topics
-- Entity interactions, side effects, dosing
+- FDA, drug approvals, regulatory topics
+- Drug interactions, side effects, dosing
 - Medical research, clinical trials
 
 Respond with only "NON_PHARMACEUTICAL" if the question is about:
@@ -2687,7 +2687,7 @@ Response:"""
             logger.info("❌ Query classified as NON_PHARMACEUTICAL - returning scope limitation message")
             return """I appreciate your question! I'm here to assist with pharmaceutical and medical-related topics. While I can't answer questions outside my area of expertise, I'd be happy to help with:
 
-- **Entity Information**: Details about medications, their uses, and interactions
+- **Drug Information**: Details about medications, their uses, and interactions
 - **Medical Conditions**: Information about diseases, symptoms, and treatments
 - **Regulatory Insights**: FDA approvals, guidelines, and compliance
 - **Clinical Research**: Information about trials, studies, and medical research
@@ -2724,7 +2724,7 @@ You are a highly knowledgeable pharmaceutical and medical AI assistant. Your res
 - Reference earlier topics naturally when relevant (e.g., "As we discussed earlier about...", "Building on your previous question...")
 - Maintain conversation continuity and remember what the user has asked about
 - If the user asks follow-up questions, assume they relate to previous topics unless explicitly stated otherwise
-- Use pronouns and references appropriately (e.g., "this entity", "that side effect" when referring to previously mentioned items)
+- Use pronouns and references appropriately (e.g., "this drug", "that side effect" when referring to previously mentioned items)
 
 # Critical Formatting Rules - FOLLOW EXACTLY
 1. **Markdown Syntax**: Always use proper markdown syntax:
@@ -2769,7 +2769,7 @@ You are a highly knowledgeable pharmaceutical and medical AI assistant. Your res
 - Include relevant context and background
 - Use medical terminology appropriately
 - Include disclaimers for medical advice
-- For entity information, include: class, mechanism, indications, dosing, side effects, contraindications, and important warnings
+- For drug information, include: class, mechanism, indications, dosing, side effects, contraindications, and important warnings
 
 # Example Response Format
 ## Overview
