@@ -70,7 +70,7 @@ class DocumentAssociation(BaseModel):
 class BulkUploadItem(BaseModel):
     file_name: str
     file_url: str
-    entity_name: Optional[str] = None
+    drug_name: Optional[str] = None
     comments: Optional[str] = None
     us_ma_date: Optional[str] = None
 
@@ -318,7 +318,7 @@ async def get_collection(
         if search:
             search_lower = search.lower()
             if not (search_lower in doc.file_name.lower() or 
-                    (doc.entity_name and search_lower in doc.entity_name.lower())):
+                    (doc.drug_name and search_lower in doc.drug_name.lower())):
                 continue
         
         filtered_documents.append(doc)
@@ -358,7 +358,7 @@ async def get_collection(
             "id": doc.id,
             "file_name": doc.file_name,
             "file_url": doc.file_url,
-            "entity_name": doc.entity_name,
+            "drug_name": doc.drug_name,
             "status": doc.status,  # Global document status
             "collection_status": collection_status,  # Status within this collection
             "error_message": error_message,  # Error message if failed
@@ -656,7 +656,7 @@ async def bulk_upload_to_collection(
                         "row": idx + 1,
                         "id": existing_file.id,
                         "file_name": existing_file.file_name,
-                        "entity_name": existing_file.entity_name,
+                        "drug_name": existing_file.drug_name,
                         "note": "Existing file added to collection"
                     })
                 continue
@@ -665,7 +665,7 @@ async def bulk_upload_to_collection(
             new_file = SourceFiles(
                 file_name=item.file_name,
                 file_url=item.file_url,
-                entity_name=item.entity_name,
+                drug_name=item.drug_name,
                 comments=item.comments,
                 us_ma_date=item.us_ma_date,
                 status="PENDING",
@@ -696,7 +696,7 @@ async def bulk_upload_to_collection(
                 "row": idx + 1,
                 "id": new_file.id,
                 "file_name": new_file.file_name,
-                "entity_name": new_file.entity_name
+                "drug_name": new_file.drug_name
             })
             
         except Exception as e:
@@ -1047,20 +1047,20 @@ async def get_indexing_job_status(
             detail=f"Failed to get indexing job status: {str(e)}"
         )
 
-@router.get("/{collection_id}/entity-names")
-async def get_collection_entitie_names(
+@router.get("/{collection_id}/drug-names")
+async def get_collection_drug_names(
     collection_id: int,
-    search: Optional[str] = Query(None, description="Search term for filtering entity names"),
-    limit: int = Query(200, ge=1, le=1000, description="Number of entity names to return"),
+    search: Optional[str] = Query(None, description="Search term for filtering drug names"),
+    limit: int = Query(200, ge=1, le=1000, description="Number of drug names to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
-    include_counts: bool = Query(True, description="Include document counts for each entity"),
+    include_counts: bool = Query(True, description="Include document counts for each drug"),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Get unique entity names from a collection with optional search and pagination.
+    Get unique drug names from a collection with optional search and pagination.
     
-    This endpoint is optimized for large collections and returns entity names
+    This endpoint is optimized for large collections and returns drug names
     efficiently without loading all document details.
     """
     try:
@@ -1089,60 +1089,60 @@ async def get_collection_entitie_names(
             search_lower = search.lower()
             base_query = base_query.filter(
                 or_(
-                    SourceFiles.entity_name.ilike(f"%{search_lower}%"),
+                    SourceFiles.drug_name.ilike(f"%{search_lower}%"),
                     SourceFiles.file_name.ilike(f"%{search_lower}%")
                 )
             )
         
-        # Get all documents to extract unique entity names
+        # Get all documents to extract unique drug names
         all_documents = base_query.all()
         
-        # Extract unique entity names with their document counts
-        entitie_map = {}
+        # Extract unique drug names with their document counts
+        drug_map = {}
         for doc in all_documents:
-            entity_name = doc.entity_name or doc.file_name
-            if entity_name not in entitie_map:
-                entitie_map[entity_name] = {
-                    "name": entity_name,
+            drug_name = doc.drug_name or doc.file_name
+            if drug_name not in drug_map:
+                drug_map[drug_name] = {
+                    "name": drug_name,
                     "document_count": 0,
                     "document_ids": [],
                     "documents": []
                 }
-            entitie_map[entity_name]["document_count"] += 1
-            entitie_map[entity_name]["document_ids"].append(doc.id)
-            entitie_map[entity_name]["documents"].append({
+            drug_map[drug_name]["document_count"] += 1
+            drug_map[drug_name]["document_ids"].append(doc.id)
+            drug_map[drug_name]["documents"].append({
                 "id": doc.id,
                 "file_name": doc.file_name
             })
         
         # Convert to sorted list
-        entitie_list = list(entitie_map.values())
-        entitie_list.sort(key=lambda x: x["name"].lower())
+        drug_list = list(drug_map.values())
+        drug_list.sort(key=lambda x: x["name"].lower())
         
         # Calculate total count before pagination
-        total_count = len(entitie_list)
+        total_count = len(drug_list)
         
         # Apply pagination
-        paginated_entities = entitie_list[offset:offset + limit]
+        paginated_drugs = drug_list[offset:offset + limit]
         
         # Format response based on include_counts flag
         if include_counts:
-            entity_names = [
+            drug_names = [
                 {
-                    "entity_name": entity["name"],
-                    "document_count": entity["document_count"],
-                    "document_ids": entity["document_ids"],
-                    "documents": entity["documents"]
+                    "drug_name": drug["name"],
+                    "document_count": drug["document_count"],
+                    "document_ids": drug["document_ids"],
+                    "documents": drug["documents"]
                 }
-                for entity in paginated_entities
+                for drug in paginated_drugs
             ]
         else:
-            entity_names = [entity["name"] for entity in paginated_entities]
+            drug_names = [drug["name"] for drug in paginated_drugs]
         
         return {
             "collection_id": collection_id,
             "collection_name": collection.name,
-            "entity_names": entity_names,
+            "drug_names": drug_names,
             "total_count": total_count,
             "limit": limit,
             "offset": offset,
@@ -1151,10 +1151,10 @@ async def get_collection_entitie_names(
         }
         
     except Exception as e:
-        logger.error(f"Error getting collection entity names: {str(e)}")
+        logger.error(f"Error getting collection drug names: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get entity names: {str(e)}"
+            detail=f"Failed to get drug names: {str(e)}"
         )
 
 @router.get("/{collection_id}/vector-details")
@@ -1232,7 +1232,7 @@ async def get_collection_vector_details(
                                 documents_map[doc_id] = {
                                     "file_name": file_name or f"Unknown (ID: {doc_id})",
                                     "chunk_count": 0,
-                                    "entity_name": metadata.get("entity_name", "")
+                                    "drug_name": metadata.get("drug_name", "")
                                 }
                             documents_map[doc_id]["chunk_count"] += 1
                 
@@ -1241,7 +1241,7 @@ async def get_collection_vector_details(
                     {
                         "document_id": doc_id,
                         "file_name": doc_info["file_name"],
-                        "entity_name": doc_info["entity_name"],
+                        "drug_name": doc_info["drug_name"],
                         "chunk_count": doc_info["chunk_count"]
                     }
                     for doc_id, doc_info in sorted(documents_map.items(), key=lambda x: x[1]["file_name"])
@@ -1727,7 +1727,7 @@ async def get_extracted_metadata(
                 cem.extracted_value,
                 cem.extracted_at,
                 sf.file_name,
-                sf.entity_name,
+                sf.drug_name,
                 mg.name as group_name
             FROM collection_extracted_metadata cem
             JOIN SourceFiles sf ON cem.document_id = sf.id
@@ -1753,7 +1753,7 @@ async def get_extracted_metadata(
                 documents_metadata[doc_id] = {
                     "document_id": doc_id,
                     "file_name": row.file_name,
-                    "entity_name": row.entity_name,
+                    "drug_name": row.drug_name,
                     "metadata": {},
                     "groups": set()
                 }
@@ -1810,7 +1810,7 @@ async def export_metadata(
             row = {
                 "Document ID": doc["document_id"],
                 "File Name": doc["file_name"],
-                "Entity Name": doc["entity_name"]
+                "Drug Name": doc["drug_name"]
             }
             # Add metadata fields
             row.update(doc["metadata"])
