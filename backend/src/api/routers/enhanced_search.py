@@ -1,4 +1,4 @@
-"""Enhanced search router with dual search and entity details."""
+"""Enhanced search router with dual search and drug details."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.encoders import jsonable_encoder
@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, ConfigDict
 
-from database.database import get_db, FDAExtractionResults, SourceFiles, EntitySections
+from database.database import get_db, FDAExtractionResults, SourceFiles, DrugSections
 from api.services.enhanced_search_service import EnhancedSearchService
 from api.services.simple_analytics_service import SimpleAnalyticsService
 from api.routers.simple_auth import get_current_user
@@ -20,7 +20,7 @@ class DualSearchRequest(BaseModel):
     collection_id: Optional[int] = None
     filters: Optional[Dict[str, Any]] = None
 
-class EntityDetailResponse(BaseModel):
+class DrugDetailResponse(BaseModel):
     basic_info: Dict[str, Any]
     timeline: Dict[str, Any]
     sections: List[Dict[str, Any]]
@@ -72,55 +72,55 @@ async def get_advanced_filters(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/entities/{entity_id}/details", response_model=EntityDetailResponse)
-async def get_entity_details(
-    entity_id: int,
+@router.get("/drugs/{drug_id}/details", response_model=DrugDetailResponse)
+async def get_drug_details(
+    drug_id: int,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get comprehensive entity details with sections."""
+    """Get comprehensive drug details with sections."""
     try:
         from api.services.analytics_service import AnalyticsService
         
-        # Get basic entity info
-        entity = db.query(FDAExtractionResults).filter(
-            FDAExtractionResults.id == entity_id
+        # Get basic drug info
+        drug = db.query(FDAExtractionResults).filter(
+            FDAExtractionResults.id == drug_id
         ).first()
-        if not entity:
-            raise HTTPException(status_code=404, detail="Entity not found")
+        if not drug:
+            raise HTTPException(status_code=404, detail="Drug not found")
         
-        # Track entity view
-        await AnalyticsService.track_entitie_view(
+        # Track drug view
+        await AnalyticsService.track_drug_view(
             db=db,
             username=current_user.get("username"),
-            entity_name=entity.entity_name,
-            entity_id=entity_id
+            drug_name=drug.drug_name,
+            drug_id=drug_id
         )
         # Get structured sections
-        sections = db.query(EntitySections).filter(
-            EntitySections.source_file_id == entity.source_file_id
-        ).order_by(EntitySections.section_order).all()
-        # Get indication from EntitySections
+        sections = db.query(DrugSections).filter(
+            DrugSections.source_file_id == drug.source_file_id
+        ).order_by(DrugSections.section_order).all()
+        # Get indication from DrugSections
         indication_section = next((s for s in sections if s.section_type == "indication"), None)
         # Get source file info
         source_file = db.query(SourceFiles).filter(
-            SourceFiles.id == entity.source_file_id
+            SourceFiles.id == drug.source_file_id
         ).first()
         return {
             "basic_info": {
-                "id": entity.id,
-                "entity_name": entity.entity_name,
+                "id": drug.id,
+                "drug_name": drug.drug_name,
                 "therapeutic_area": indication_section.section_content if indication_section else "Not specified",
                 "approval_status": "Approved",  # Default since this field doesn't exist
                 "country": "United States",  # Default since this field doesn't exist
-                "applicant": entity.manufacturer or "Not specified",
-                "active_substance": entity.active_ingredients or "Not specified",
-                "regulatory": f"FDA {entity.submission_number}" if entity.submission_number else "FDA"
+                "applicant": drug.manufacturer or "Not specified",
+                "active_substance": drug.active_ingredients or "Not specified",
+                "regulatory": f"FDA {drug.submission_number}" if drug.submission_number else "FDA"
             },
             "timeline": {
                 "submission_date": None,  # Field doesn't exist in current schema
                 "pdufa_date": None,  # Field doesn't exist in current schema
-                "approval_date": entity.approval_date
+                "approval_date": drug.approval_date
             },
             "sections": [
                 {
@@ -132,7 +132,7 @@ async def get_entity_details(
                 } for section in sections
             ],
             "file_url": source_file.file_url if source_file else None,
-            "metadata": entity.full_metadata or {}
+            "metadata": drug.full_metadata or {}
         }
     except HTTPException:
         raise
