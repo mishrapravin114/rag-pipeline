@@ -40,7 +40,7 @@ class ExtractionJobStatus(BaseModel):
 class DocumentPreview(BaseModel):
     id: int
     file_name: str
-    entity_name: Optional[str]
+    drug_name: Optional[str]
     
     class Config:
         from_attributes = True
@@ -226,7 +226,7 @@ async def get_collection_extraction_jobs(
             # For now, we'll show collection documents, but ideally we should track
             # which specific documents were processed in each job
             doc_query = text("""
-                SELECT DISTINCT sf.id, sf.file_name, sf.entity_name
+                SELECT DISTINCT sf.id, sf.file_name, sf.drug_name
                 FROM SourceFiles sf
                 JOIN collection_document_association cda ON sf.id = cda.document_id
                 WHERE cda.collection_id = :collection_id
@@ -243,7 +243,7 @@ async def get_collection_extraction_jobs(
                 DocumentPreview(
                     id=doc.id,
                     file_name=doc.file_name,
-                    entity_name=doc.entity_name
+                    drug_name=doc.drug_name
                 ) for doc in doc_results
             ]
             
