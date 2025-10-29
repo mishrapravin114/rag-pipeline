@@ -1,4 +1,5 @@
 // Minor update
+// Minor update
 import { Loader2 } from 'lucide-react';
 
 export default function ChatLoading() {
