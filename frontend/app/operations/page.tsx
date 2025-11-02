@@ -1,4 +1,5 @@
 // Minor update
+// Minor update
 "use client";
 
 import { useEffect } from "react";
