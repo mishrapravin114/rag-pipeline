@@ -38,7 +38,7 @@ class ViewMetadataResponse(BaseModel):
     source_file_id: Optional[int] = None
     file_name: Optional[str] = None
     file_url: Optional[str] = None
-    entity_name: Optional[str] = None
+    drug_name: Optional[str] = None
     metadata_extracted: Optional[bool] = None
     metadata_count: Optional[int] = None
     metadata: Optional[List[Dict[str, Any]]] = None
@@ -48,7 +48,7 @@ class SourceFileForMetadataResponse(BaseModel):
     id: int
     file_name: str
     file_url: str
-    entity_name: Optional[str]
+    drug_name: Optional[str]
     status: str
     metadata_extracted: bool
     metadata_count: int
@@ -174,7 +174,7 @@ async def view_extracted_metadata(
                 "source_file_id": source_file_info.get("id", source_file_id),
                 "file_name": source_file_info.get("file_name"),
                 "file_url": source_file_info.get("file_url"),
-                "entity_name": source_file_info.get("entity_name"),
+                "drug_name": source_file_info.get("drug_name"),
                 "metadata_extracted": True,
                 "metadata_count": result.get("total_count", 0),
                 "metadata": result.get("metadata", [])
@@ -305,7 +305,7 @@ async def extract_metadata_sequential(
                 eligible_files.append({
                     'id': source_file.id,
                     'file_name': source_file.file_name,
-                    'entity_name': source_file.entity_name
+                    'drug_name': source_file.drug_name
                 })
             else:
                 logger.warning(f"Source file {file_id} has status {source_file.status}, skipping (must be READY/indexed)")
@@ -394,7 +394,7 @@ async def get_metadata_export_data(
         result = MetadataExtractionService.get_all_metadata_for_export(db)
         
         if result["success"]:
-            logger.info(f"Successfully retrieved export data: {result['total_records']} records for {result['total_entities']} entities")
+            logger.info(f"Successfully retrieved export data: {result['total_records']} records for {result['total_drugs']} drugs")
             return result
         else:
             logger.error(f"Failed to get export data: {result.get('error')}")
