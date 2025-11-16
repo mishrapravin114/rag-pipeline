@@ -22,7 +22,7 @@ from api.services.chat_management_service import FDAChatManagementService
 
 # Utility imports
 from utils.qdrant_util import QdrantUtil
-from utils.entity_file_matcher import EntityFileMatcher
+from utils.drug_file_matcher import DrugFileMatcher
 from utils.llm_util import get_llm, get_llm_grading
 from utils.intent_classifier import QueryIntent
 from utils.filtered_agent_knowledge_qdrant import FilteredAgentKnowledge
@@ -293,7 +293,7 @@ async def _get_gemini_global_response(query: str, session_id: str) -> str:
         # Build comprehensive instructions from the non-agent prompt
         agent_instructions = [
             "You are a highly knowledgeable AI assistant specializing in pharmaceutical, FDA, EMA, and regulatory documents.",
-            "Your primary expertise is in pharmaceuticals, FDA, EMA, regulatory affairs, and you can also provide information about entity costs and pricing when asked.",
+            "Your primary expertise is in pharmaceuticals, FDA, EMA, regulatory affairs, and you can also provide information about drug costs and pricing when asked.",
             "For topics outside your expertise, provide a helpful and polite response explaining what you can help with instead.",
             "Always be helpful and courteous, even when a query is outside your main domain.",
             "Please provide clear, comprehensive, and well-structured responses to all queries.",
@@ -304,7 +304,7 @@ async def _get_gemini_global_response(query: str, session_id: str) -> str:
             "3. Be factual and provide specific source citations where possible",
             "4. Format your response in valid semantic HTML",
             "5. Include relevant source URLs for the information you provide—preferably direct links to pages, PDFs, or articles, not just main website homepages",
-            "6. For cost/pricing queries: Provide general information about entity pricing factors, typical price ranges if known, and suggest reliable sources for current pricing",
+            "6. For cost/pricing queries: Provide general information about drug pricing factors, typical price ranges if known, and suggest reliable sources for current pricing",
             "7. For off-topic queries: Politely acknowledge the question and offer to help with pharmaceutical or regulatory topics instead"
             "",
             "HTML Formatting Requirements:",
@@ -328,8 +328,8 @@ async def _get_gemini_global_response(query: str, session_id: str) -> str:
             "Always indicate that your response is from general knowledge, not from the document knowledge base.",
             "",
             "Special Instructions:",
-            "- For entity cost/pricing queries: Acknowledge that prices vary by location, brand, and other factors. Provide general guidance and suggest checking with local pharmacies or official pricing databases.",
-            "- For off-topic queries: Use this format: 'I appreciate your question about [topic]. While my expertise is primarily in pharmaceutical and regulatory affairs, I'd be happy to help you with questions about entity information, FDA/EMA regulations, clinical trials, entity safety, or pharmaceutical pricing. Is there anything in these areas I can assist you with?'",
+            "- For drug cost/pricing queries: Acknowledge that prices vary by location, brand, and other factors. Provide general guidance and suggest checking with local pharmacies or official pricing databases.",
+            "- For off-topic queries: Use this format: 'I appreciate your question about [topic]. While my expertise is primarily in pharmaceutical and regulatory affairs, I'd be happy to help you with questions about drug information, FDA/EMA regulations, clinical trials, drug safety, or pharmaceutical pricing. Is there anything in these areas I can assist you with?'",
             "- Never say you 'cannot' help - instead, redirect politely to topics you can help with.",
             "- Maintain a helpful, professional, and friendly tone throughout."
         ]
@@ -438,15 +438,15 @@ async def _enhance_query_with_context_v3(
             2. Add only relevant domain-specific terms, synonyms, or closely related keywords that align with the user's intent.
             3. Convert incomplete, vague, or shorthand queries into clear, full sentences without altering meaning.
             4. If the query is a question, rephrase it into a neutral, search-style statement.
-            5. Do not introduce new topics, entities, processes, or concepts that were not mentioned or implied.
+            5. Do not introduce new topics, drugs, processes, or concepts that were not mentioned or implied.
             6. Output only the enhanced query itself. Do not include explanations, examples, or any other text.
 
             Example Transformations:
             - Input: "side effects"  
-            Output: "Information about side effects of the entity."
+            Output: "Information about side effects of the drug."
 
             - Input: "FDA approval process"  
-            Output: "Information on the FDA approval process for entities."
+            Output: "Information on the FDA approval process for drugs."
 
             - Input: "compare ibrutinib and acalabrutinib"  
             Output: "Comparison between ibrutinib and acalabrutinib."
@@ -711,8 +711,8 @@ async def query_agentic(
         else:
             # Existing logic for non-docXChat requests
             logger.info("Using standard file matching logic")
-            from utils.entity_file_matcher import EntityFileMatcher
-            relevant_files = await EntityFileMatcher.extract_relevant_files_for_query(
+            from utils.drug_file_matcher import DrugFileMatcher
+            relevant_files = await DrugFileMatcher.extract_relevant_files_for_query(
                 enhanced_query,
                 collection_id=request.collection_id,
                 source_file_ids=request.source_file_ids,    
@@ -842,7 +842,7 @@ async def query_agentic(
         db.commit()
         logger.info(f"Chat request saved successfully with ID: {chat_id}")
 
-        result = result.replace("http://34.9.3.61/", "https://dxdemo.raglior.com/")
+        result = result.replace("http://34.9.3.61/", "https://dxdemo.rxinsightx.com/")
 
         formatted_result = {
             "user_query": request.query,
