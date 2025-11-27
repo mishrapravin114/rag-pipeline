@@ -1,4 +1,4 @@
-"""Simple chat endpoints for FDA entity information."""
+"""Simple chat endpoints for FDA drug information."""
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -17,7 +17,7 @@ router = APIRouter(tags=["simple_chat"])
 
 class ChatRequest(BaseModel):
     message: str
-    entityId: Optional[int] = None
+    drugId: Optional[int] = None
     session_id: Optional[str] = None
 
 class ChatResponse(BaseModel):
@@ -40,17 +40,17 @@ async def simple_chat(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Simple chat endpoint for FDA entity queries."""
+    """Simple chat endpoint for FDA drug queries."""
     try:
-        # If entityId is provided, get context from that entity
+        # If drugId is provided, get context from that drug
         context = ""
-        if request.entityId:
-            entity = db.query(FDAExtractionResults).filter(
-                FDAExtractionResults.id == request.entityId
+        if request.drugId:
+            drug = db.query(FDAExtractionResults).filter(
+                FDAExtractionResults.id == request.drugId
             ).first()
             
-            if entity:
-                context = f"Context: Entity {entity.entity_name} by {entity.manufacturer}. "
+            if drug:
+                context = f"Context: Drug {drug.drug_name} by {drug.manufacturer}. "
         
         # Initialize ChromaDB
         vector_db = QdrantUtil.get_instance(use_persistent_client=True)
@@ -66,7 +66,7 @@ async def simple_chat(
             response_content = results if results else f"I couldn't find specific information about '{request.message}'."
         except Exception as e:
             logger.error(f"ChromaDB query error: {e}")
-            response_content = f"{context}Based on the FDA database, {request.message}. Please check the entity details section for more specific information."
+            response_content = f"{context}Based on the FDA database, {request.message}. Please check the drug details section for more specific information."
         
         return ChatResponse(
             id=str(datetime.now().timestamp()),
