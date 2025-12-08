@@ -1,4 +1,4 @@
-"""Complete working API router for FDA entity information system."""
+"""Complete working API router for FDA drug information system."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 import time
 import logging
 
-from database.database import get_db_session, FDAExtractionResults, EntitySections, SourceFiles
+from database.database import get_db_session, FDAExtractionResults, DrugSections, SourceFiles
 from api.routers.simple_auth import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ async def dual_search(
         # Brand name search
         if request.brand_name:
             filter_conditions.append(
-                FDAExtractionResults.entity_name.ilike(f"%{request.brand_name}%")
+                FDAExtractionResults.drug_name.ilike(f"%{request.brand_name}%")
             )
         
         # Execute search
@@ -62,7 +62,7 @@ async def dual_search(
             formatted_results.append({
                 "id": result.id,
                 "source_file_id": result.source_file_id,
-                "entity_name": result.entity_name or "Unknown",
+                "drug_name": result.drug_name or "Unknown",
                 "therapeutic_area": "Not specified",
                 "manufacturer": result.manufacturer or "Unknown",
                 "approval_status": "Approved",
@@ -88,45 +88,45 @@ async def dual_search(
         logger.error(f"Error in dual search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/entities/{entity_id}/details")
-async def get_entity_details(
-    entity_id: int,
+@router.get("/drugs/{drug_id}/details")
+async def get_drug_details(
+    drug_id: int,
     db: Session = Depends(get_db)
 ):
-    """Get comprehensive entity details with sections."""
+    """Get comprehensive drug details with sections."""
     try:
-        # Get basic entity info
-        entity = db.query(FDAExtractionResults).filter(
-            FDAExtractionResults.id == entity_id
+        # Get basic drug info
+        drug = db.query(FDAExtractionResults).filter(
+            FDAExtractionResults.id == drug_id
         ).first()
-        if not entity:
-            raise HTTPException(status_code=404, detail="Entity not found")
+        if not drug:
+            raise HTTPException(status_code=404, detail="Drug not found")
         
         # Get structured sections
-        sections = db.query(EntitySections).filter(
-            EntitySections.source_file_id == entity.source_file_id
-        ).order_by(EntitySections.section_order).all()
+        sections = db.query(DrugSections).filter(
+            DrugSections.source_file_id == drug.source_file_id
+        ).order_by(DrugSections.section_order).all()
         
         # Get source file info
         source_file = db.query(SourceFiles).filter(
-            SourceFiles.id == entity.source_file_id
+            SourceFiles.id == drug.source_file_id
         ).first()
         
         return {
             "basic_info": {
-                "id": entity.id,
-                "entity_name": entity.entity_name,
+                "id": drug.id,
+                "drug_name": drug.drug_name,
                 "therapeutic_area": "Not specified",
                 "approval_status": "Approved",
                 "country": "United States",
-                "applicant": entity.manufacturer or "Not specified",
-                "active_substance": entity.active_ingredients or "Not specified",
-                "regulatory": f"FDA {entity.submission_number}" if entity.submission_number else "FDA"
+                "applicant": drug.manufacturer or "Not specified",
+                "active_substance": drug.active_ingredients or "Not specified",
+                "regulatory": f"FDA {drug.submission_number}" if drug.submission_number else "FDA"
             },
             "timeline": {
                 "submission_date": None,
                 "pdufa_date": None,
-                "approval_date": entity.approval_date
+                "approval_date": drug.approval_date
             },
             "sections": [
                 {
@@ -138,12 +138,12 @@ async def get_entity_details(
                 } for section in sections
             ],
             "file_url": source_file.file_url if source_file else None,
-            "metadata": entity.full_metadata or {}
+            "metadata": drug.full_metadata or {}
         }
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error getting entity details: {e}")
+        logger.error(f"Error getting drug details: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/analytics/dashboard")
@@ -154,11 +154,11 @@ async def get_dashboard_data(
     """Get comprehensive dashboard data for user."""
     try:
         # Get basic stats
-        total_entities = db.query(FDAExtractionResults).count()
-        total_sections = db.query(EntitySections).count()
+        total_drugs = db.query(FDAExtractionResults).count()
+        total_sections = db.query(DrugSections).count()
         
         return {
-            "total_entities": total_entities,
+            "total_drugs": total_drugs,
             "total_sections": total_sections,
             "total_searches": 0,
             "recent_activity": [],
